@@ -1,0 +1,63 @@
+# Operating system and editor state
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python bytecode, environments, and package output
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Python tooling caches and reports
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+
+# Local configuration and secrets. The checked-in template is the exception.
+.env
+.env.*
+!.env.example
+.secrets/
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Runtime state and generated evaluation output. Two frozen, source-bound
+# evidence manifests are intentional repository inputs; all other generated
+# evaluation files remain ignored.
+artifacts/*
+!artifacts/evaluation/
+artifacts/evaluation/*
+!artifacts/evaluation/primary-seed-42-model-bound.json
+!artifacts/evaluation/multi-seed-model-bound-20000.json
+reports/
+.retrywise/
+*.log
+*.pid
+*.sqlite
+*.sqlite3
+.postgres-data/
+
+# Console dependencies and build output
+apps/console/node_modules/
+apps/console/.next/
+apps/console/coverage/

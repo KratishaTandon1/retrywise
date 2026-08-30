@@ -1,0 +1,170 @@
+{
+  "aggregate": {
+    "all_point_estimates_positive": true,
+    "hard_safety_violations": 0,
+    "incremental_recovered_orders": 3137,
+    "net_lift_vs_b3_minor": 398238867,
+    "retrywise_net_simulated_incremental_value_minor": 2058512501,
+    "run_count": 10,
+    "runs_supporting_improvement": 9
+  },
+  "labels": {
+    "dataset": "Synthetic counterfactual scenarios",
+    "observed_real_merchant_revenue_claimed": false,
+    "real_money": false,
+    "value": "Offline simulated recovered value"
+  },
+  "manifest": {
+    "bootstrap_samples_per_seed": 400,
+    "case_count_per_seed": 2000,
+    "code_revision": "source-sha256:0e8db3a795bdb58f2bba1a79be77523a4784691c5e4c165d5de5cb271a4d6fcb",
+    "model_version": "sha256:78a93913ceef2b1f1e4886e833c41b5bd14f34cd791c9dd9dac706d654070855",
+    "policy_version": "recovery-policy-v1",
+    "seeds": [
+      101,
+      211,
+      307,
+      401,
+      503,
+      601,
+      701,
+      809,
+      907,
+      1009
+    ],
+    "total_cases": 20000
+  },
+  "runs": [
+    {
+      "dataset_hash": "2f19a63014acae7a7f1c70eef6972b3f17d31eb957e7f24dfa30260a64d1c055",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 320,
+      "net_lift_vs_b3_minor": 51555986,
+      "paired_interval_vs_b3_minor": {
+        "high": 91867870,
+        "low": 19228568,
+        "supports_improvement": true
+      },
+      "retrywise_net_simulated_incremental_value_minor": 207881416,
+      "seed": 101
+    },
+    {
+      "dataset_hash": "41d89006d300d17d16e0cd32025a90e46e09f6d4684a8b1705d44afeacb93c46",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 349,
+      "net_lift_vs_b3_minor": 54665815,
+      "paired_interval_vs_b3_minor": {
+        "high": 116030852,
+        "low": 11985307,
+        "supports_improvement": true
+      },
+      "retrywise_net_simulated_incremental_value_minor": 251341645,
+      "seed": 211
+    },
+    {
+      "dataset_hash": "e21d85c0d101feb8d386527a2f9b8152c78c7d97830b55c50d1a1a3374fb0a90",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 301,
+      "net_lift_vs_b3_minor": 36443625,
+      "paired_interval_vs_b3_minor": {
+        "high": 72942825,
+        "low": 9432232,
+        "supports_improvement": true
+      },
+      "retrywise_net_simulated_incremental_value_minor": 197318025,
+      "seed": 307
+    },
+    {
+      "dataset_hash": "f851f47314c404bff29b70a35e1c4f1d956daceb660cb7fa71a41b3147603156",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 333,
+      "net_lift_vs_b3_minor": 43738395,
+      "paired_interval_vs_b3_minor": {
+        "high": 72825445,
+        "low": 16415476,
+        "supports_improvement": true
+      },
+      "retrywise_net_simulated_incremental_value_minor": 217043717,
+      "seed": 401
+    },
+    {
+      "dataset_hash": "a44b4c6b9bfbbaa934ee20a4d7a91e35ee17bc184484d17f4a79851d51edd489",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 330,
+      "net_lift_vs_b3_minor": 58370113,
+      "paired_interval_vs_b3_minor": {
+        "high": 105229190,
+        "low": 10559571,
+        "supports_improvement": true
+      },
+      "retrywise_net_simulated_incremental_value_minor": 223855816,
+      "seed": 503
+    },
+    {
+      "dataset_hash": "61775b7b0bb5fbfd3fd122a86794fcbf816c4a752bfcd1faeba66d134c4e9b19",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 328,
+      "net_lift_vs_b3_minor": 49106933,
+      "paired_interval_vs_b3_minor": {
+        "high": 86049885,
+        "low": 12959617,
+        "supports_improvement": true
+      },
+      "retrywise_net_simulated_incremental_value_minor": 215718598,
+      "seed": 601
+    },
+    {
+      "dataset_hash": "ddbd067f8ec000dd410909b54d880fac0310a54775074f9f94afbecf9a7a3dbc",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 333,
+      "net_lift_vs_b3_minor": 27784445,
+      "paired_interval_vs_b3_minor": {
+        "high": 55262763,
+        "low": 4900036,
+        "supports_improvement": true
+      },
+      "retrywise_net_simulated_incremental_value_minor": 212356231,
+      "seed": 701
+    },
+    {
+      "dataset_hash": "09619a972eb7001b082beb42c7d12b20993da2b790115ad42a85b245f82bfab6",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 287,
+      "net_lift_vs_b3_minor": 21031418,
+      "paired_interval_vs_b3_minor": {
+        "high": 47971686,
+        "low": -5043303,
+        "supports_improvement": false
+      },
+      "retrywise_net_simulated_incremental_value_minor": 198564659,
+      "seed": 809
+    },
+    {
+      "dataset_hash": "96c8214652046593616cac9b4b9c98671a7c8a095602a3d4328295c6bbdc27b4",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 272,
+      "net_lift_vs_b3_minor": 29152444,
+      "paired_interval_vs_b3_minor": {
+        "high": 55094728,
+        "low": 9746487,
+        "supports_improvement": true
+      },
+      "retrywise_net_simulated_incremental_value_minor": 169773681,
+      "seed": 907
+    },
+    {
+      "dataset_hash": "ad4059788dc89360a4e71fb355eb14dfcb041797dfed648615663adfb6da49ec",
+      "hard_safety_violations": 0,
+      "incremental_recovered_orders": 284,
+      "net_lift_vs_b3_minor": 26389693,
+      "paired_interval_vs_b3_minor": {
+        "high": 53102884,
+        "low": 5475889,
+        "supports_improvement": true
+      },
+      "retrywise_net_simulated_incremental_value_minor": 164658713,
+      "seed": 1009
+    }
+  ],
+  "schema_version": "retrywise.multi_seed.v1"
+}

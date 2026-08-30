@@ -1,0 +1,658 @@
+openapi: 3.1.0
+info:
+  title: RetryWise Control Plane API
+  version: 0.1.0
+  description: >-
+    Merchant-scoped API for incident-aware Razorpay payment recovery.
+    Each operation carries an implementation-status extension. Models may rank
+    actions, but only deterministic policy code can authorize an effect.
+x-retrywise-contract-status: runtime-aligned-with-operation-markers
+servers:
+  - url: http://localhost:8000
+    description: Local development
+security:
+  - bearerAuth: []
+tags:
+  - name: Overview
+  - name: Recoveries
+  - name: Approvals
+  - name: Controls
+  - name: Incidents
+  - name: Impact
+  - name: Audit
+  - name: Webhooks
+paths:
+  /health/live:
+    get:
+      x-retrywise-implementation-status: implemented
+      security: []
+      operationId: getLiveness
+      responses:
+        '200':
+          description: Process is alive
+  /health/ready:
+    get:
+      x-retrywise-implementation-status: implemented
+      security: []
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Required dependencies are ready
+        '503':
+          description: One or more required dependencies are unavailable
+  /api/v1/overview:
+    get:
+      x-retrywise-implementation-status: implemented
+      tags: [Overview]
+      operationId: getOverview
+      parameters:
+        - $ref: '#/components/parameters/Environment'
+      responses:
+        '200':
+          description: Environment-isolated recovery summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Overview'
+  /api/v1/recovery-cases:
+    get:
+      x-retrywise-implementation-status: implemented
+      tags: [Recoveries]
+      operationId: listRecoveryCases
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Bounded tenant-scoped recovery cases from Test Mode state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [environment, cases]
+                properties:
+                  environment: { type: string, const: RAZORPAY_TEST_MODE }
+                  cases:
+                    type: array
+                    items: { $ref: '#/components/schemas/RecoveryCase' }
+  /api/v1/recovery-cases/{recovery_case_id}:
+    get:
+      x-retrywise-implementation-status: implemented
+      tags: [Recoveries]
+      operationId: getRecoveryCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      responses:
+        '200':
+          description: Persisted case, decision, action, and instrument dossier
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/approvals:
+    get:
+      x-retrywise-implementation-status: implemented
+      tags: [Approvals]
+      operationId: listApprovals
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Tenant-scoped approvals, pending first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [environment, approvals]
+                properties:
+                  environment: { type: string, const: RAZORPAY_TEST_MODE }
+                  approvals:
+                    type: array
+                    items: { $ref: '#/components/schemas/ApprovalSummary' }
+  /api/v1/approvals/{approval_identifier}/decision:
+    post:
+      x-retrywise-implementation-status: implemented
+      tags: [Approvals]
+      operationId: decideApproval
+      parameters:
+        - $ref: '#/components/parameters/ApprovalId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [verdict, reason_code]
+              properties:
+                verdict: { type: string, enum: [APPROVED, REJECTED] }
+                reason_code: { type: string, pattern: '^[a-z][a-z0-9_]{0,99}$' }
+      responses:
+        '202':
+          description: Human decision queued for worker-side fresh recheck
+        '200':
+          description: Rejection committed or identical final decision already exists
+        '409':
+          description: Approval is stale, expired, or conflicts with prior authority
+  /api/v1/incidents:
+    get:
+      x-retrywise-implementation-status: implemented
+      tags: [Incidents]
+      operationId: listIncidents
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Current and recent method-health incidents
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [environment, incidents]
+                properties:
+                  environment: { type: string, const: RAZORPAY_TEST_MODE }
+                  incidents:
+                    type: array
+                    items: { $ref: '#/components/schemas/Incident' }
+  /api/v1/controls/kill-switch:
+    get:
+      x-retrywise-implementation-status: implemented
+      tags: [Controls]
+      operationId: getMerchantKillSwitch
+      responses:
+        '200':
+          description: Effective deployment and merchant collection-effect controls
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantControlState' }
+    post:
+      x-retrywise-implementation-status: implemented
+      tags: [Controls]
+      operationId: setMerchantKillSwitch
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [enabled, reason_code]
+              properties:
+                enabled: { type: boolean }
+                reason_code:
+                  type: string
+                  enum:
+                    - emergency_stop
+                    - operator_safety_hold
+                    - test_mode_hold
+                    - resume_after_verification
+                    - enable_test_mode_effects
+      responses:
+        '200':
+          description: Control state and immutable event evidence committed atomically
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantControlState' }
+        '409':
+          description: Idempotency key is already bound to another control request
+  /api/v1/controls/diagnosis-engine:
+    get:
+      x-retrywise-implementation-status: implemented
+      tags: [Controls]
+      operationId: getDiagnosisEngine
+      responses:
+        '200':
+          description: Effective merchant diagnosis mode and secret availability
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DiagnosisControlState' }
+    post:
+      x-retrywise-implementation-status: implemented
+      tags: [Controls]
+      operationId: setDiagnosisEngine
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [mode]
+              properties:
+                mode: { type: string, enum: [LOCAL_ML, HYBRID_GEMINI, SHADOW] }
+      responses:
+        '200':
+          description: Mode and immutable operator evidence committed atomically
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DiagnosisControlState' }
+        '409':
+          description: Idempotency key is already bound to another control request
+  /api/v1/impact/runs:
+    get:
+      x-retrywise-implementation-status: planned
+      tags: [Impact]
+      operationId: listEvaluationRuns
+      responses:
+        '200':
+          description: Reproducible replay and simulation runs
+    post:
+      x-retrywise-implementation-status: implemented
+      tags: [Impact]
+      operationId: startEvaluationRun
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplayRunRequest' }
+      responses:
+        '200':
+          description: >-
+            Replay evaluated synchronously and deterministically. All output
+            remains explicitly labelled offline synthetic counterfactual
+            evidence.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReplayOverview' }
+        '400':
+          description: Invalid replay manifest or idempotency key
+        '409':
+          description: Idempotency key was already bound to a different manifest
+  /api/v1/recovery-cases/{recovery_case_id}/audit:
+    get:
+      x-retrywise-implementation-status: implemented
+      tags: [Audit]
+      operationId: getAuditProof
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      responses:
+        '200':
+          description: Ordered entries and recomputed PostgreSQL hash-chain verification
+  /api/v1/webhooks/razorpay/{endpoint_token}:
+    post:
+      x-retrywise-implementation-status: implemented
+      security: []
+      tags: [Webhooks]
+      operationId: receiveRazorpayWebhook
+      description: >-
+        Verifies HMAC over the exact raw request bytes, validates account binding,
+        deduplicates the provider event, commits inbox plus outbox, and returns.
+      parameters:
+        - name: endpoint_token
+          in: path
+          required: true
+          schema: { type: string, minLength: 24, maxLength: 128 }
+        - name: X-Razorpay-Signature
+          in: header
+          required: true
+          schema: { type: string }
+        - name: x-razorpay-event-id
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '204':
+          description: Verified event durably accepted or already accepted
+        '400':
+          description: Invalid envelope or account binding
+        '401':
+          description: Invalid signature
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        Opaque, merchant-scoped operator token in the current development
+        adapter. A deployed identity provider adapter is planned.
+  parameters:
+    Environment:
+      name: environment
+      in: query
+      required: true
+      schema: { type: string, enum: [RAZORPAY_TEST_MODE, REPLAY] }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    CaseId:
+      name: recovery_case_id
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$' }
+    ApprovalId:
+      name: approval_identifier
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$' }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 128 }
+  responses:
+    NotFound:
+      description: Resource does not exist inside the authenticated merchant
+  schemas:
+    Money:
+      type: object
+      additionalProperties: false
+      required: [minor, currency]
+      properties:
+        minor: { type: integer, minimum: 0 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+    MerchantControlState:
+      type: object
+      additionalProperties: false
+      required:
+        - environment
+        - merchant_id
+        - kill_switch_enabled
+        - global_kill_switch_enabled
+        - collection_effects_enabled
+        - policy_version
+        - last_event
+        - idempotent_replay
+      properties:
+        environment: { type: string, const: RAZORPAY_TEST_MODE }
+        merchant_id: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$' }
+        kill_switch_enabled: { type: boolean }
+        global_kill_switch_enabled: { type: boolean }
+        collection_effects_enabled: { type: boolean }
+        policy_version: { type: string }
+        idempotent_replay: { type: boolean }
+        last_event:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [id, sequence_number, reason_code, changed_at]
+              properties:
+                id: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$' }
+                sequence_number: { type: integer, minimum: 1 }
+                reason_code: { type: string }
+                changed_at: { type: string, format: date-time }
+    DiagnosisControlState:
+      type: object
+      additionalProperties: false
+      required:
+        - environment
+        - merchant_id
+        - mode
+        - gemini_configured
+        - effective_for
+        - local_fallback_enabled
+        - policy_authority
+        - last_event
+        - idempotent_replay
+      properties:
+        environment: { type: string, const: RAZORPAY_TEST_MODE }
+        merchant_id: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$' }
+        mode: { type: string, enum: [LOCAL_ML, HYBRID_GEMINI, SHADOW] }
+        gemini_configured: { type: boolean }
+        effective_for: { type: string, const: future_assessments }
+        local_fallback_enabled: { type: boolean, const: true }
+        policy_authority: { type: string, const: DETERMINISTIC }
+        idempotent_replay: { type: boolean }
+        last_event:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [id, sequence_number, reason_code, changed_at]
+              properties:
+                id: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$' }
+                sequence_number: { type: integer, minimum: 1 }
+                reason_code: { type: string }
+                changed_at: { type: string, format: date-time }
+    RecoveryState:
+      type: string
+      enum:
+        - OBSERVING
+        - ASSESSING
+        - WAITING
+        - APPROVAL_REQUIRED
+        - ACTION_QUEUED
+        - EXECUTING
+        - ACTION_UNCERTAIN
+        - ACTIVE
+        - RECOVERED
+        - SUPPRESSED_PAID
+        - SUPPRESSED_POLICY
+        - EXHAUSTED
+        - FAILED_SAFE
+        - ESCALATED
+        - DUPLICATE_REVIEW
+    Overview:
+      oneOf:
+        - $ref: '#/components/schemas/ReplayOverview'
+        - $ref: '#/components/schemas/TestModeOverview'
+      discriminator:
+        propertyName: environment
+        mapping:
+          REPLAY: '#/components/schemas/ReplayOverview'
+          RAZORPAY_TEST_MODE: '#/components/schemas/TestModeOverview'
+    EvidenceLabels:
+      type: object
+      additionalProperties: false
+      required: [value_label, real_money, observed_real_merchant_revenue_claimed]
+      properties:
+        value_label: { type: string }
+        dataset_label: { type: string }
+        execution_context: { type: string }
+        test_mode_collection_label: { type: string }
+        real_money: { type: boolean, const: false }
+        observed_real_merchant_revenue_claimed: { type: boolean, const: false }
+    ReplayRunRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        seed: { type: integer, default: 42 }
+        case_count: { type: integer, minimum: 1, maximum: 5000, default: 2000 }
+        bootstrap_samples: { type: integer, minimum: 1, maximum: 2000, default: 400 }
+    ReplayOverview:
+      type: object
+      additionalProperties: false
+      required:
+        - environment
+        - labels
+        - as_of
+        - offline_simulated_incremental_value_minor
+        - incremental_recovered_orders
+        - safely_suppressed_original_successes
+        - hard_safety_violations
+        - audit_completeness_pct
+        - abstentions
+        - model_abstentions
+        - actions_executed
+        - net_lift_vs_b3_minor
+        - paired_interval_vs_b3_minor
+        - manifest
+        - diagnosis_model
+      properties:
+        environment: { type: string, const: REPLAY }
+        labels: { $ref: '#/components/schemas/EvidenceLabels' }
+        as_of: { type: string, const: deterministic-run }
+        offline_simulated_incremental_value_minor: { type: integer }
+        incremental_recovered_orders: { type: integer, minimum: 0 }
+        safely_suppressed_original_successes: { type: integer, minimum: 0 }
+        hard_safety_violations: { type: integer, minimum: 0 }
+        audit_completeness_pct: { type: number, minimum: 0, maximum: 100 }
+        abstentions: { type: integer, minimum: 0 }
+        model_abstentions: { type: integer, minimum: 0 }
+        actions_executed: { type: integer, minimum: 0 }
+        net_lift_vs_b3_minor: { type: integer }
+        paired_interval_vs_b3_minor:
+          type: object
+          additionalProperties: false
+          required: [low, high, confidence, cluster_unit, supports_improvement]
+          properties:
+            low: { type: integer }
+            high: { type: integer }
+            confidence: { type: number, minimum: 0, maximum: 1 }
+            cluster_unit: { type: string }
+            supports_improvement: { type: boolean }
+        manifest:
+          type: object
+          additionalProperties: false
+          required: [seed, case_count, dataset_hash, policy_version, model_version, code_revision]
+          properties:
+            seed: { type: integer }
+            case_count: { type: integer, minimum: 1, maximum: 5000 }
+            dataset_hash: { type: string, pattern: '^[0-9a-f]{64}$' }
+            policy_version: { type: string }
+            model_version: { type: string }
+            code_revision: { type: string }
+        diagnosis_model:
+          type: object
+          additionalProperties: false
+          required:
+            - artifact_version
+            - role
+            - dataset_label
+            - merchant_performance_claimed
+            - metrics
+          properties:
+            artifact_version: { type: string, pattern: '^sha256:[0-9a-f]{64}$' }
+            role: { type: string, const: non_authoritative_failure_classification }
+            dataset_label: { type: string }
+            merchant_performance_claimed: { type: boolean, const: false }
+            metrics:
+              type: object
+              additionalProperties: false
+              required:
+                - sample_count
+                - accuracy
+                - abstention_rate
+                - multiclass_brier_score
+                - expected_calibration_error
+              properties:
+                sample_count: { type: integer, minimum: 1 }
+                accuracy: { type: string }
+                abstention_rate: { type: string }
+                multiclass_brier_score: { type: string }
+                expected_calibration_error: { type: string }
+    TestModeOverview:
+      type: object
+      additionalProperties: false
+      required:
+        - environment
+        - labels
+        - test_mode_recovered_minor
+        - open_cases
+        - hard_safety_violations
+        - message
+      properties:
+        environment: { type: string, const: RAZORPAY_TEST_MODE }
+        labels: { $ref: '#/components/schemas/EvidenceLabels' }
+        test_mode_recovered_minor: { type: ['integer', 'null'], minimum: 0 }
+        open_cases: { type: ['integer', 'null'], minimum: 0 }
+        hard_safety_violations: { type: ['integer', 'null'], minimum: 0 }
+        message: { type: string }
+    RecoverySummary:
+      type: object
+      required: [id, merchant_order_ref, amount_due, state, updated_at]
+      properties:
+        id: { type: string }
+        merchant_order_ref: { type: string }
+        amount_due: { $ref: '#/components/schemas/Money' }
+        state: { $ref: '#/components/schemas/RecoveryState' }
+        likely_cause: { type: string }
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        updated_at: { type: string, format: date-time }
+    RecoveryCase:
+      type: object
+      additionalProperties: true
+      required: [id, logical_order_id, state, version, amount_minor, currency, updated_at]
+      properties:
+        id: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$' }
+        logical_order_id: { type: string }
+        state: { $ref: '#/components/schemas/RecoveryState' }
+        version: { type: integer, minimum: 0 }
+        amount_minor: { type: integer, minimum: 1 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        updated_at: { type: string, format: date-time }
+    ApprovalSummary:
+      type: object
+      additionalProperties: true
+      required: [id, recovery_case_id, decision_id, aggregate_version, verdict, expires_at]
+      properties:
+        id: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$' }
+        recovery_case_id: { type: string }
+        decision_id: { type: string }
+        aggregate_version: { type: integer, minimum: 0 }
+        verdict: { type: string, enum: [PENDING, APPROVED, REJECTED, EXPIRED, CANCELLED] }
+        expires_at: { type: string, format: date-time }
+    RecoveryPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RecoverySummary' }
+        next_cursor: { type: [string, 'null'] }
+    Guardrail:
+      type: object
+      required: [code, verdict, checked_at]
+      properties:
+        code: { type: string }
+        verdict: { type: string, enum: [PASS, BLOCK, REVIEW] }
+        checked_at: { type: string, format: date-time }
+        evidence: { type: object, additionalProperties: true }
+    TimelineEntry:
+      type: object
+      required: [sequence, occurred_at, kind, title, entry_hash]
+      properties:
+        sequence: { type: integer, minimum: 1 }
+        occurred_at: { type: string, format: date-time }
+        kind: { type: string }
+        title: { type: string }
+        source: { type: string }
+        entry_hash: { type: string }
+    RecoveryDossier:
+      allOf:
+        - $ref: '#/components/schemas/RecoverySummary'
+        - type: object
+          required: [aggregate_version, canonical_truth, guardrails, timeline]
+          properties:
+            aggregate_version: { type: integer, minimum: 0 }
+            canonical_truth:
+              type: string
+              enum: [UNKNOWN, UNPAID, AUTHORIZED, PARTIALLY_PAID, PAID, OVERPAID, EXCEPTION]
+            selected_action: { type: string }
+            considered_actions:
+              type: array
+              items: { type: object, additionalProperties: true }
+            guardrails:
+              type: array
+              items: { $ref: '#/components/schemas/Guardrail' }
+            timeline:
+              type: array
+              items: { $ref: '#/components/schemas/TimelineEntry' }
+    Incident:
+      type: object
+      required: [id, scope, state, severity, confidence, updated_at]
+      properties:
+        id: { type: string }
+        scope: { type: string }
+        state: { type: string, enum: [NORMAL, SUSPECTED, CONFIRMED, COOLING] }
+        severity: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        provider_corroborated: { type: boolean }
+        updated_at: { type: string, format: date-time }

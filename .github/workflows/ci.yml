@@ -1,0 +1,264 @@
+name: RetryWise CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: retrywise-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-and-evidence:
+    name: Unit and deterministic replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONHASHSEED: "0"
+      RETRYWISE_CODE_REVISION: ${{ github.sha }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install runtime and test dependencies
+        run: python -m pip install -e '.[api,dev]'
+
+      - name: Run unit and integration-contract tests
+        run: make unit
+
+      - name: Verify seeded smoke determinism
+        run: make eval-smoke-determinism
+
+      - name: Verify seeded golden adversarial determinism
+        run: make eval-golden-determinism
+
+      - name: Verify committed primary evidence against source
+        run: make eval-primary-verify
+
+      - name: Preserve evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrywise-evaluation-${{ github.run_id }}
+          path: artifacts/evaluation/
+          if-no-files-found: error
+          retention-days: 7
+
+  quality-and-api:
+    name: Lint, type, API, coverage, package
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install API and quality dependencies
+        run: python -m pip install -e '.[api,dev]'
+
+      - name: Enforce formatting, lint, and typing
+        run: make quality
+
+      - name: Require FastAPI transport tests
+        run: make api-test
+
+      - name: Enforce branch-aware coverage
+        run: make coverage
+
+      - name: Build distributable artifacts
+        run: make package
+
+  postgres-schema:
+    name: Compile PostgreSQL 16 migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: retrywise_ci
+          POSTGRES_USER: retrywise_ci
+          POSTGRES_PASSWORD: retrywise_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U retrywise_ci -d retrywise_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Apply migration with stop-on-error
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/001_initial.sql
+
+      - name: Seed a pre-hardening upgrade fixture
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/tests/seed_pre_hardening_upgrade.sql
+
+      - name: Apply fenced outbox migration with stop-on-error
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/002_fenced_outbox_delivery.sql
+
+      - name: Apply provider-effect boundary migration with stop-on-error
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/003_enforce_effect_source_boundary.sql
+
+      - name: Apply observation-deadline migration with stop-on-error
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/004_enforce_observation_deadline.sql
+
+      - name: Apply provider-account binding migration with stop-on-error
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/005_bind_provider_event_account.sql
+
+      - name: Apply versioned credential-binding migration with stop-on-error
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/006_version_credential_binding.sql
+
+      - name: Build provider-event body-reuse index concurrently
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/007_index_provider_event_body_reuse.sql
+
+      - name: Allow authenticated late Payment Link money truth
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/008_allow_late_link_money_truth.sql
+
+      - name: Add exact-revision worker readiness heartbeats
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/009_worker_heartbeats.sql
+
+      - name: Add immutable merchant effect-control evidence
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/010_merchant_control_events.sql
+
+      - name: Add diagnosis engine routing and provenance
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/migrations/011_diagnosis_engine_routing.sql
+
+      - name: Verify the hardening upgrade contract
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --file infrastructure/postgres/tests/verify_post_hardening_upgrade.sql
+
+      - name: Verify fenced outbox schema
+        env:
+          PGPASSWORD: retrywise_ci_password
+        run: >-
+          psql
+          --host 127.0.0.1
+          --username retrywise_ci
+          --dbname retrywise_ci
+          --set ON_ERROR_STOP=1
+          --command "DO \$\$ BEGIN IF NOT (to_regtype('retrywise.outbox_retry_mode') IS NOT NULL AND (SELECT count(*) = 4 FROM information_schema.columns WHERE table_schema = 'retrywise' AND table_name = 'outbox_jobs' AND column_name IN ('delivery_version', 'lease_token', 'retry_mode', 'completion_reference')) AND (SELECT count(*) = 2 FROM information_schema.columns WHERE table_schema = 'retrywise' AND table_name = 'recovery_cases' AND column_name IN ('observation_started_at', 'observation_contract_version')) AND (SELECT count(*) = 2 FROM information_schema.columns WHERE table_schema = 'retrywise' AND table_name = 'provider_accounts' AND column_name IN ('credential_key_id_sha256', 'credential_binding_version')) AND to_regprocedure('retrywise.enforce_effect_source_boundary()') IS NOT NULL AND to_regprocedure('retrywise.enforce_observation_deadline()') IS NOT NULL AND to_regprocedure('retrywise.enforce_provider_event_account_binding()') IS NOT NULL AND to_regprocedure('retrywise.enforce_provider_account_credential_binding()') IS NOT NULL AND to_regclass('retrywise.worker_heartbeats') IS NOT NULL AND EXISTS (SELECT 1 FROM pg_catalog.pg_index WHERE indexrelid = to_regclass('retrywise.provider_events_body_reuse_lookup_idx') AND indisvalid AND indisready) AND EXISTS (SELECT 1 FROM pg_catalog.pg_index WHERE indexrelid = to_regclass('retrywise.worker_heartbeats_freshness_idx') AND indisvalid AND indisready) AND EXISTS (SELECT 1 FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace WHERE namespace.nspname = 'retrywise' AND procedure.proname = 'enforce_recovery_instrument_lifecycle' AND position('OLD.status IN (''CANCELLED'', ''EXPIRED'')' IN pg_get_functiondef(procedure.oid)) > 0 AND position('NEW.status IN (''PAID'', ''PARTIALLY_PAID'')' IN pg_get_functiondef(procedure.oid)) > 0)) THEN RAISE EXCEPTION 'hardened RetryWise schema is incomplete'; END IF; END \$\$"

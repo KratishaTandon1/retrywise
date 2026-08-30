@@ -1,0 +1,195 @@
+name: retrywise
+
+x-postgres-environment: &postgres-environment
+  POSTGRES_DB: retrywise_dev
+  POSTGRES_USER: retrywise_dev
+  POSTGRES_PASSWORD: ${RETRYWISE_POSTGRES_PASSWORD:-retrywise_local_only}
+  POSTGRES_INITDB_ARGS: --data-checksums
+
+x-database-url: &database-url
+  DATABASE_URL: postgresql://retrywise_dev:${RETRYWISE_POSTGRES_PASSWORD:-retrywise_local_only}@postgres:5432/retrywise_dev
+
+services:
+  postgres:
+    image: postgres:17.6-bookworm
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment: *postgres-environment
+    ports:
+      - "127.0.0.1:${RETRYWISE_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - retrywise-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - database
+
+  migrate:
+    image: postgres:17.6-bookworm
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *database-url
+      PGCONNECT_TIMEOUT: "5"
+    command:
+      - sh
+      - /migrations/apply-local-migration.sh
+      - /migrations/001_initial.sql
+      - /migrations/002_fenced_outbox_delivery.sql
+      - /migrations/003_enforce_effect_source_boundary.sql
+      - /migrations/004_enforce_observation_deadline.sql
+      - /migrations/005_bind_provider_event_account.sql
+      - /migrations/006_version_credential_binding.sql
+      - /migrations/007_index_provider_event_body_reuse.sql
+      - /migrations/008_allow_late_link_money_truth.sql
+      - /migrations/009_worker_heartbeats.sql
+      - /migrations/010_merchant_control_events.sql
+      - /migrations/011_diagnosis_engine_routing.sql
+    volumes:
+      - ./infrastructure/postgres/apply-local-migration.sh:/migrations/apply-local-migration.sh:ro
+      - ./infrastructure/postgres/migrations/001_initial.sql:/migrations/001_initial.sql:ro
+      - ./infrastructure/postgres/migrations/002_fenced_outbox_delivery.sql:/migrations/002_fenced_outbox_delivery.sql:ro
+      - ./infrastructure/postgres/migrations/003_enforce_effect_source_boundary.sql:/migrations/003_enforce_effect_source_boundary.sql:ro
+      - ./infrastructure/postgres/migrations/004_enforce_observation_deadline.sql:/migrations/004_enforce_observation_deadline.sql:ro
+      - ./infrastructure/postgres/migrations/005_bind_provider_event_account.sql:/migrations/005_bind_provider_event_account.sql:ro
+      - ./infrastructure/postgres/migrations/006_version_credential_binding.sql:/migrations/006_version_credential_binding.sql:ro
+      - ./infrastructure/postgres/migrations/007_index_provider_event_body_reuse.sql:/migrations/007_index_provider_event_body_reuse.sql:ro
+      - ./infrastructure/postgres/migrations/008_allow_late_link_money_truth.sql:/migrations/008_allow_late_link_money_truth.sql:ro
+      - ./infrastructure/postgres/migrations/009_worker_heartbeats.sql:/migrations/009_worker_heartbeats.sql:ro
+      - ./infrastructure/postgres/migrations/010_merchant_control_events.sql:/migrations/010_merchant_control_events.sql:ro
+      - ./infrastructure/postgres/migrations/011_diagnosis_engine_routing.sql:/migrations/011_diagnosis_engine_routing.sql:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - database
+
+  api:
+    image: retrywise-control-plane:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        PYTHON_VERSION: ${RETRYWISE_PYTHON_VERSION:-3.12.13}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 20s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *database-url
+      DATABASE_REQUIRE_TLS: "${DATABASE_REQUIRE_TLS:-false}"
+      RETRYWISE_ENVIRONMENT: ${RETRYWISE_ENVIRONMENT:-development}
+      RETRYWISE_DATA_SOURCE: ${RETRYWISE_DATA_SOURCE:-REPLAY}
+      RETRYWISE_EFFECTS_MODE: ${RETRYWISE_EFFECTS_MODE:-disabled}
+      RETRYWISE_GLOBAL_KILL_SWITCH: ${RETRYWISE_GLOBAL_KILL_SWITCH:-true}
+      RETRYWISE_CODE_REVISION: ${RETRYWISE_CODE_REVISION:-local-compose}
+      RETRYWISE_PUBLIC_BASE_URL: ${RETRYWISE_PUBLIC_BASE_URL:-http://127.0.0.1:8000}
+      RETRYWISE_CORS_ALLOWED_ORIGINS: ${RETRYWISE_CORS_ALLOWED_ORIGINS:-http://127.0.0.1:3000}
+      RETRYWISE_WEBHOOK_MAX_BODY_BYTES: ${RETRYWISE_WEBHOOK_MAX_BODY_BYTES:-262144}
+      RETRYWISE_MERCHANT_ID: ${RETRYWISE_MERCHANT_ID:-}
+      RETRYWISE_OPERATOR_TOKEN: ${RETRYWISE_OPERATOR_TOKEN:-}
+      RETRYWISE_OPERATOR_SUBJECT: ${RETRYWISE_OPERATOR_SUBJECT:-local-operator}
+      RETRYWISE_GEMINI_API_KEY_FILE: ${RETRYWISE_GEMINI_API_KEY_FILE:-}
+      RETRYWISE_WEBHOOK_ENDPOINT_TOKEN: ${RETRYWISE_WEBHOOK_ENDPOINT_TOKEN:-}
+      RETRYWISE_PROVIDER_ACCOUNT_ID: ${RETRYWISE_PROVIDER_ACCOUNT_ID:-}
+      RAZORPAY_ACCOUNT_ID: ${RAZORPAY_ACCOUNT_ID:-}
+      RAZORPAY_WEBHOOK_SECRET_FILE: ${RAZORPAY_WEBHOOK_SECRET_FILE:-}
+      RAZORPAY_WEBHOOK_SECRET_CURRENT: ${RAZORPAY_WEBHOOK_SECRET_CURRENT:-}
+      RAZORPAY_WEBHOOK_SECRET_PREVIOUS: ${RAZORPAY_WEBHOOK_SECRET_PREVIOUS:-}
+      RAZORPAY_WEBHOOK_SECRET_PREVIOUS_EXPIRES_AT: ${RAZORPAY_WEBHOOK_SECRET_PREVIOUS_EXPIRES_AT:-}
+    ports:
+      - "127.0.0.1:${RETRYWISE_API_PORT:-8000}:8000"
+    volumes:
+      - ${RETRYWISE_WEBHOOK_SECRET_ROOT_HOST:-./.secrets/webhook}:/run/secrets/webhook:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2).read()
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - database
+      - egress
+
+  worker:
+    profiles: ["razorpay-test"]
+    image: retrywise-control-plane:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        PYTHON_VERSION: ${RETRYWISE_PYTHON_VERSION:-3.12.13}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 40s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *database-url
+      DATABASE_REQUIRE_TLS: "${DATABASE_REQUIRE_TLS:-false}"
+      RETRYWISE_ENVIRONMENT: ${RETRYWISE_ENVIRONMENT:-development}
+      RETRYWISE_DATA_SOURCE: RAZORPAY_TEST_MODE
+      RETRYWISE_EFFECTS_MODE: razorpay_test
+      RETRYWISE_GLOBAL_KILL_SWITCH: "${RETRYWISE_GLOBAL_KILL_SWITCH:-true}"
+      RETRYWISE_CODE_REVISION: ${RETRYWISE_CODE_REVISION:-local-compose}
+      RETRYWISE_PUBLIC_BASE_URL: ${RETRYWISE_PUBLIC_BASE_URL:-http://127.0.0.1:8000}
+      RETRYWISE_CORS_ALLOWED_ORIGINS: ${RETRYWISE_CORS_ALLOWED_ORIGINS:-http://127.0.0.1:3000}
+      RETRYWISE_WEBHOOK_MAX_BODY_BYTES: ${RETRYWISE_WEBHOOK_MAX_BODY_BYTES:-262144}
+      RETRYWISE_MERCHANT_ID: ${RETRYWISE_MERCHANT_ID:-}
+      RETRYWISE_PROVIDER_ACCOUNT_ID: ${RETRYWISE_PROVIDER_ACCOUNT_ID:-}
+      RETRYWISE_WORKER_ID: ${RETRYWISE_WORKER_ID:-}
+      RETRYWISE_SECRET_ROOT: /run/secrets/retrywise
+      RETRYWISE_GEMINI_API_KEY_FILE: ${RETRYWISE_GEMINI_API_KEY_FILE:-}
+      RETRYWISE_GEMINI_MODEL: ${RETRYWISE_GEMINI_MODEL:-gemini-2.5-flash}
+      RETRYWISE_GEMINI_TIMEOUT_SECONDS: ${RETRYWISE_GEMINI_TIMEOUT_SECONDS:-2.5}
+    command: ["retrywise-worker"]
+    volumes:
+      - ${RETRYWISE_SECRET_ROOT_HOST:-./.secrets/razorpay}:/run/secrets/retrywise:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    networks:
+      - database
+      - egress
+
+volumes:
+  retrywise-postgres:
+
+networks:
+  database:
+    internal: true
+  egress:

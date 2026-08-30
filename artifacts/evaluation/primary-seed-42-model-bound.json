@@ -1,0 +1,626 @@
+{
+  "comparisons": [
+    {
+      "candidate": "B1",
+      "conclusion": "worse_safety_no_improvement_claim",
+      "confidence_interval": {
+        "bootstrap_samples": 400,
+        "cluster_unit": "merchant_id",
+        "confidence": 0.95,
+        "high_minor": 271734110,
+        "low_minor": 61622952
+      },
+      "delta_hard_safety_violations": 2487,
+      "delta_incremental_recovered_orders": 385,
+      "delta_net_value_minor": 162660646,
+      "losses": 1615,
+      "paired_on": "scenario_id_and_precomputed_potential_outcomes",
+      "reference": "B0",
+      "supports_improvement": false,
+      "ties": 0,
+      "wins": 385
+    },
+    {
+      "candidate": "B2",
+      "conclusion": "paired_interval_supports_improvement",
+      "confidence_interval": {
+        "bootstrap_samples": 400,
+        "cluster_unit": "merchant_id",
+        "confidence": 0.95,
+        "high_minor": 123826314,
+        "low_minor": 77002729
+      },
+      "delta_hard_safety_violations": 0,
+      "delta_incremental_recovered_orders": 149,
+      "delta_net_value_minor": 98925393,
+      "losses": 426,
+      "paired_on": "scenario_id_and_precomputed_potential_outcomes",
+      "reference": "B0",
+      "supports_improvement": true,
+      "ties": 1425,
+      "wins": 149
+    },
+    {
+      "candidate": "B3",
+      "conclusion": "paired_interval_supports_improvement",
+      "confidence_interval": {
+        "bootstrap_samples": 400,
+        "cluster_unit": "merchant_id",
+        "confidence": 0.95,
+        "high_minor": 204114190,
+        "low_minor": 138128066
+      },
+      "delta_hard_safety_violations": 0,
+      "delta_incremental_recovered_orders": 265,
+      "delta_net_value_minor": 170720250,
+      "losses": 233,
+      "paired_on": "scenario_id_and_precomputed_potential_outcomes",
+      "reference": "B0",
+      "supports_improvement": true,
+      "ties": 1502,
+      "wins": 265
+    },
+    {
+      "candidate": "RetryWise",
+      "conclusion": "paired_interval_supports_improvement",
+      "confidence_interval": {
+        "bootstrap_samples": 400,
+        "cluster_unit": "merchant_id",
+        "confidence": 0.95,
+        "high_minor": 244487918,
+        "low_minor": 154827430
+      },
+      "delta_hard_safety_violations": 0,
+      "delta_incremental_recovered_orders": 318,
+      "delta_net_value_minor": 201077673,
+      "losses": 180,
+      "paired_on": "scenario_id_and_precomputed_potential_outcomes",
+      "reference": "B0",
+      "supports_improvement": true,
+      "ties": 1502,
+      "wins": 318
+    },
+    {
+      "candidate": "RetryWise",
+      "conclusion": "paired_interval_supports_improvement",
+      "confidence_interval": {
+        "bootstrap_samples": 400,
+        "cluster_unit": "merchant_id",
+        "confidence": 0.95,
+        "high_minor": 140223717,
+        "low_minor": 64821685
+      },
+      "delta_hard_safety_violations": 0,
+      "delta_incremental_recovered_orders": 169,
+      "delta_net_value_minor": 102152280,
+      "losses": 48,
+      "paired_on": "scenario_id_and_precomputed_potential_outcomes",
+      "reference": "B2",
+      "supports_improvement": true,
+      "ties": 1682,
+      "wins": 270
+    },
+    {
+      "candidate": "RetryWise",
+      "conclusion": "paired_interval_supports_improvement",
+      "confidence_interval": {
+        "bootstrap_samples": 400,
+        "cluster_unit": "merchant_id",
+        "confidence": 0.95,
+        "high_minor": 58493901,
+        "low_minor": 3827280
+      },
+      "delta_hard_safety_violations": 0,
+      "delta_incremental_recovered_orders": 53,
+      "delta_net_value_minor": 30357423,
+      "losses": 21,
+      "paired_on": "scenario_id_and_precomputed_potential_outcomes",
+      "reference": "B3",
+      "supports_improvement": true,
+      "ties": 1905,
+      "wins": 74
+    },
+    {
+      "candidate": "oracle",
+      "conclusion": "paired_interval_supports_improvement",
+      "confidence_interval": {
+        "bootstrap_samples": 400,
+        "cluster_unit": "merchant_id",
+        "confidence": 0.95,
+        "high_minor": 93296214,
+        "low_minor": 33680478
+      },
+      "delta_hard_safety_violations": 0,
+      "delta_incremental_recovered_orders": 91,
+      "delta_net_value_minor": 63779761,
+      "losses": 2,
+      "paired_on": "scenario_id_and_precomputed_potential_outcomes",
+      "reference": "RetryWise",
+      "supports_improvement": true,
+      "ties": 1788,
+      "wins": 210
+    }
+  ],
+  "deployable_ranking": [
+    "RetryWise",
+    "B3",
+    "B2",
+    "B0",
+    "B1"
+  ],
+  "labels": {
+    "dataset_label": "Synthetic counterfactual scenarios",
+    "execution_context": "offline_replay",
+    "observed_real_merchant_revenue_claimed": false,
+    "real_money": false,
+    "test_mode_collection_label": "Razorpay test-mode collection executed: not measured by this offline run",
+    "value_label": "Offline simulated recovered value"
+  },
+  "manifest": {
+    "adversarial_flag_counts": [
+      [
+        "ambiguous_mapping",
+        47
+      ],
+      [
+        "both_collection_paths_can_capture",
+        427
+      ],
+      [
+        "cancel_paid_race",
+        49
+      ],
+      [
+        "capture_during_observation",
+        559
+      ],
+      [
+        "capture_while_link_creation_in_flight",
+        33
+      ],
+      [
+        "contact_cap_exhausted",
+        34
+      ],
+      [
+        "currency_mismatch",
+        106
+      ],
+      [
+        "expired_order",
+        55
+      ],
+      [
+        "kill_switch",
+        87
+      ],
+      [
+        "partial_payment",
+        65
+      ],
+      [
+        "prompt_injection_metadata",
+        118
+      ],
+      [
+        "provider_error",
+        43
+      ],
+      [
+        "unknown_enum",
+        154
+      ],
+      [
+        "worker_crash",
+        38
+      ]
+    ],
+    "bootstrap_samples": 400,
+    "case_count": 2000,
+    "code_revision": "source-sha256:5eab4d3a6bfccb52d451f160048c9c517e32370621ff210dc8cc7987f8b43411",
+    "cost_assumptions": {
+      "action_cost_minor": 100,
+      "communication_cost_minor": 200,
+      "duplicate_penalty_minor": 50000,
+      "friction_penalty_minor": 1000,
+      "incentive_cost_minor": 0
+    },
+    "dataset_hash": "31043e8819084521de4dc34231af512e0b5200751221873d0b15ce4ef507e647",
+    "delivery_mutation_counts": [
+      [
+        "cross_tenant",
+        182
+      ],
+      [
+        "delayed_capture",
+        56
+      ],
+      [
+        "dropped_capture",
+        19
+      ],
+      [
+        "duplicate",
+        400
+      ],
+      [
+        "early_downtime_signal",
+        223
+      ],
+      [
+        "invalid_signature",
+        286
+      ],
+      [
+        "late_downtime_signal",
+        223
+      ],
+      [
+        "malformed",
+        29
+      ],
+      [
+        "missing_downtime_signal",
+        222
+      ],
+      [
+        "schema_evolution",
+        154
+      ]
+    ],
+    "model_version": "sha256:78a93913ceef2b1f1e4886e833c41b5bd14f34cd791c9dd9dac706d654070855",
+    "policy_version": "recovery-policy-v1",
+    "scenario_family_counts": [
+      [
+        "bank_specific_incident",
+        222
+      ],
+      [
+        "expired_credential",
+        222
+      ],
+      [
+        "insufficient_funds",
+        222
+      ],
+      [
+        "issuer_specific_incident",
+        223
+      ],
+      [
+        "late_authorization",
+        222
+      ],
+      [
+        "ordinary_recoverable",
+        222
+      ],
+      [
+        "unknown_failure",
+        222
+      ],
+      [
+        "upi_wide_incident",
+        223
+      ],
+      [
+        "wrong_upi_pin",
+        222
+      ]
+    ],
+    "seed": 42,
+    "simulator_version": "simulator-v1"
+  },
+  "results": {
+    "B0": {
+      "deployable": true,
+      "display_name": "B0 Natural recovery",
+      "metrics": {
+        "abstention_rate": 1.0,
+        "abstentions": 2000,
+        "action_cost_minor": 0,
+        "action_recovered_orders": 0,
+        "actions_executed": 0,
+        "audit_completeness_pct": 100.0,
+        "communication_cost_minor": 0,
+        "contact_efficiency": 0.0,
+        "contacts_sent": 0,
+        "cross_tenant_effects": 0,
+        "duplicate_effects_under_replay": 0,
+        "duplicate_events_suppressed": 400,
+        "duplicate_penalty_minor": 0,
+        "duplicate_risk_events": 0,
+        "friction_penalty_minor": 0,
+        "gross_action_recovered_value_minor": 0,
+        "hard_safety_violations": 0,
+        "incentive_cost_minor": 0,
+        "incremental_recovered_orders": 0,
+        "invalid_events_rejected": 497,
+        "invalid_webhook_acceptances": 0,
+        "median_recovery_time_ms": 65189,
+        "multiple_active_recovery_instruments": 0,
+        "natural_recovered_orders": 559,
+        "natural_recovered_value_minor": 572285212,
+        "net_simulated_incremental_value_minor": 0,
+        "original_success_actions_suppressed": 0,
+        "p95_recovery_time_ms": 101371,
+        "recognized_overpayments": 0,
+        "safety_violation_breakdown": [],
+        "simulated_incremental_recovered_value_minor": 0,
+        "stale_state_actions": 0,
+        "stop_rule_violations": 0,
+        "total_cases": 2000,
+        "unnecessary_contact_rate": 0.0,
+        "unnecessary_contacts": 0,
+        "unrecognized_overpayments": 0,
+        "unsafe_executed_action_rate": 0.0
+      }
+    },
+    "B1": {
+      "deployable": true,
+      "display_name": "B1 Blast all",
+      "metrics": {
+        "abstention_rate": 0.0,
+        "abstentions": 0,
+        "action_cost_minor": 200000,
+        "action_recovered_orders": 615,
+        "actions_executed": 2000,
+        "audit_completeness_pct": 100.0,
+        "communication_cost_minor": 400000,
+        "contact_efficiency": 0.1925,
+        "contacts_sent": 2000,
+        "cross_tenant_effects": 0,
+        "duplicate_effects_under_replay": 0,
+        "duplicate_events_suppressed": 400,
+        "duplicate_penalty_minor": 236143173,
+        "duplicate_risk_events": 230,
+        "friction_penalty_minor": 1615000,
+        "gross_action_recovered_value_minor": 625661992,
+        "hard_safety_violations": 2487,
+        "incentive_cost_minor": 0,
+        "incremental_recovered_orders": 385,
+        "invalid_events_rejected": 497,
+        "invalid_webhook_acceptances": 0,
+        "median_recovery_time_ms": 52918,
+        "multiple_active_recovery_instruments": 0,
+        "natural_recovered_orders": 559,
+        "natural_recovered_value_minor": 572285212,
+        "net_simulated_incremental_value_minor": 162660646,
+        "original_success_actions_suppressed": 0,
+        "p95_recovery_time_ms": 95633,
+        "recognized_overpayments": 230,
+        "safety_violation_breakdown": [
+          [
+            "ambiguous_mapping_action",
+            47
+          ],
+          [
+            "approval_bypass",
+            784
+          ],
+          [
+            "contact_cap_violation",
+            34
+          ],
+          [
+            "contact_without_consent",
+            179
+          ],
+          [
+            "currency_mismatch_action",
+            106
+          ],
+          [
+            "expired_order_action",
+            55
+          ],
+          [
+            "kill_switch_bypass",
+            87
+          ],
+          [
+            "multiple_collection_paths_captured",
+            230
+          ],
+          [
+            "partial_payment_collection",
+            65
+          ],
+          [
+            "provider_uncertainty_action",
+            43
+          ],
+          [
+            "quiet_hours_contact",
+            857
+          ]
+        ],
+        "simulated_incremental_recovered_value_minor": 401018819,
+        "stale_state_actions": 0,
+        "stop_rule_violations": 2257,
+        "total_cases": 2000,
+        "unnecessary_contact_rate": 0.8075,
+        "unnecessary_contacts": 1615,
+        "unrecognized_overpayments": 0,
+        "unsafe_executed_action_rate": 0.7885
+      }
+    },
+    "B2": {
+      "deployable": true,
+      "display_name": "B2 Fixed safe rule",
+      "metrics": {
+        "abstention_rate": 0.7125,
+        "abstentions": 1425,
+        "action_cost_minor": 57500,
+        "action_recovered_orders": 149,
+        "actions_executed": 575,
+        "audit_completeness_pct": 100.0,
+        "communication_cost_minor": 115000,
+        "contact_efficiency": 0.2591304347826087,
+        "contacts_sent": 575,
+        "cross_tenant_effects": 0,
+        "duplicate_effects_under_replay": 0,
+        "duplicate_events_suppressed": 400,
+        "duplicate_penalty_minor": 0,
+        "duplicate_risk_events": 0,
+        "friction_penalty_minor": 426000,
+        "gross_action_recovered_value_minor": 99523893,
+        "hard_safety_violations": 0,
+        "incentive_cost_minor": 0,
+        "incremental_recovered_orders": 149,
+        "invalid_events_rejected": 497,
+        "invalid_webhook_acceptances": 0,
+        "median_recovery_time_ms": 76299,
+        "multiple_active_recovery_instruments": 0,
+        "natural_recovered_orders": 559,
+        "natural_recovered_value_minor": 572285212,
+        "net_simulated_incremental_value_minor": 98925393,
+        "original_success_actions_suppressed": 211,
+        "p95_recovery_time_ms": 7272943,
+        "recognized_overpayments": 0,
+        "safety_violation_breakdown": [],
+        "simulated_incremental_recovered_value_minor": 99523893,
+        "stale_state_actions": 0,
+        "stop_rule_violations": 0,
+        "total_cases": 2000,
+        "unnecessary_contact_rate": 0.7408695652173913,
+        "unnecessary_contacts": 426,
+        "unrecognized_overpayments": 0,
+        "unsafe_executed_action_rate": 0.0
+      }
+    },
+    "B3": {
+      "deployable": true,
+      "display_name": "B3 Incident-aware rules",
+      "metrics": {
+        "abstention_rate": 0.751,
+        "abstentions": 1502,
+        "action_cost_minor": 49800,
+        "action_recovered_orders": 265,
+        "actions_executed": 498,
+        "audit_completeness_pct": 100.0,
+        "communication_cost_minor": 99600,
+        "contact_efficiency": 0.5321285140562249,
+        "contacts_sent": 498,
+        "cross_tenant_effects": 0,
+        "duplicate_effects_under_replay": 0,
+        "duplicate_events_suppressed": 400,
+        "duplicate_penalty_minor": 0,
+        "duplicate_risk_events": 0,
+        "friction_penalty_minor": 233000,
+        "gross_action_recovered_value_minor": 171102650,
+        "hard_safety_violations": 0,
+        "incentive_cost_minor": 0,
+        "incremental_recovered_orders": 265,
+        "invalid_events_rejected": 497,
+        "invalid_webhook_acceptances": 0,
+        "median_recovery_time_ms": 83646,
+        "multiple_active_recovery_instruments": 0,
+        "natural_recovered_orders": 559,
+        "natural_recovered_value_minor": 572285212,
+        "net_simulated_incremental_value_minor": 170720250,
+        "original_success_actions_suppressed": 193,
+        "p95_recovery_time_ms": 18063423,
+        "recognized_overpayments": 0,
+        "safety_violation_breakdown": [],
+        "simulated_incremental_recovered_value_minor": 171102650,
+        "stale_state_actions": 0,
+        "stop_rule_violations": 0,
+        "total_cases": 2000,
+        "unnecessary_contact_rate": 0.4678714859437751,
+        "unnecessary_contacts": 233,
+        "unrecognized_overpayments": 0,
+        "unsafe_executed_action_rate": 0.0
+      }
+    },
+    "RetryWise": {
+      "deployable": true,
+      "display_name": "RetryWise",
+      "metrics": {
+        "abstention_rate": 0.751,
+        "abstentions": 1502,
+        "action_cost_minor": 49800,
+        "action_recovered_orders": 318,
+        "actions_executed": 498,
+        "audit_completeness_pct": 100.0,
+        "communication_cost_minor": 99600,
+        "contact_efficiency": 0.6385542168674698,
+        "contacts_sent": 498,
+        "cross_tenant_effects": 0,
+        "duplicate_effects_under_replay": 0,
+        "duplicate_events_suppressed": 400,
+        "duplicate_penalty_minor": 0,
+        "duplicate_risk_events": 0,
+        "friction_penalty_minor": 180000,
+        "gross_action_recovered_value_minor": 201407073,
+        "hard_safety_violations": 0,
+        "incentive_cost_minor": 0,
+        "incremental_recovered_orders": 318,
+        "invalid_events_rejected": 497,
+        "invalid_webhook_acceptances": 0,
+        "median_recovery_time_ms": 86977,
+        "multiple_active_recovery_instruments": 0,
+        "natural_recovered_orders": 559,
+        "natural_recovered_value_minor": 572285212,
+        "net_simulated_incremental_value_minor": 201077673,
+        "original_success_actions_suppressed": 193,
+        "p95_recovery_time_ms": 18087110,
+        "recognized_overpayments": 0,
+        "safety_violation_breakdown": [],
+        "simulated_incremental_recovered_value_minor": 201407073,
+        "stale_state_actions": 0,
+        "stop_rule_violations": 0,
+        "total_cases": 2000,
+        "unnecessary_contact_rate": 0.3614457831325301,
+        "unnecessary_contacts": 180,
+        "unrecognized_overpayments": 0,
+        "unsafe_executed_action_rate": 0.0
+      }
+    },
+    "oracle": {
+      "deployable": false,
+      "display_name": "Oracle ceiling",
+      "metrics": {
+        "abstention_rate": 0.7855,
+        "abstentions": 1571,
+        "action_cost_minor": 42900,
+        "action_recovered_orders": 409,
+        "actions_executed": 429,
+        "audit_completeness_pct": 100.0,
+        "communication_cost_minor": 85800,
+        "contact_efficiency": 0.9533799533799534,
+        "contacts_sent": 429,
+        "cross_tenant_effects": 0,
+        "duplicate_effects_under_replay": 0,
+        "duplicate_events_suppressed": 400,
+        "duplicate_penalty_minor": 0,
+        "duplicate_risk_events": 0,
+        "friction_penalty_minor": 20000,
+        "gross_action_recovered_value_minor": 265006134,
+        "hard_safety_violations": 0,
+        "incentive_cost_minor": 0,
+        "incremental_recovered_orders": 409,
+        "invalid_events_rejected": 497,
+        "invalid_webhook_acceptances": 0,
+        "median_recovery_time_ms": 66690,
+        "multiple_active_recovery_instruments": 0,
+        "natural_recovered_orders": 559,
+        "natural_recovered_value_minor": 572285212,
+        "net_simulated_incremental_value_minor": 264857434,
+        "original_success_actions_suppressed": 0,
+        "p95_recovery_time_ms": 18078908,
+        "recognized_overpayments": 0,
+        "safety_violation_breakdown": [],
+        "simulated_incremental_recovered_value_minor": 265006134,
+        "stale_state_actions": 0,
+        "stop_rule_violations": 0,
+        "total_cases": 2000,
+        "unnecessary_contact_rate": 0.046620046620046623,
+        "unnecessary_contacts": 20,
+        "unrecognized_overpayments": 0,
+        "unsafe_executed_action_rate": 0.0
+      }
+    }
+  },
+  "schema_version": "retrywise.evaluation.v1"
+}

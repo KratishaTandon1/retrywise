@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "retrywise"
+version = "0.1.0"
+description = "Incident-aware, policy-governed payment recovery control plane"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.11"
+dependencies = []
+keywords = ["payments", "recovery", "fintech", "razorpay", "simulation"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.141,<1",
+  "httpx>=0.28,<1",
+  "psycopg[binary,pool]>=3.3,<4",
+  "pydantic-settings>=2.15,<3",
+  "uvicorn[standard]>=0.52,<1",
+]
+dev = [
+  "build>=1,<2",
+  "coverage>=7,<8",
+  "mypy>=2.3,<3",
+  "pyyaml>=6,<7",
+  "ruff>=0.16,<1",
+]
+
+[project.scripts]
+retrywise-evaluate = "retrywise.packages.simulator.cli:main"
+retrywise-evaluate-multiseed = "retrywise.packages.simulator.multi_seed:main"
+retrywise-worker = "retrywise.services.control_plane.worker_runtime:main"
+retrywise-enroll-test = "retrywise.services.control_plane.enrollment:main"
+
+[tool.setuptools]
+include-package-data = false
+packages = [
+  "retrywise",
+  "retrywise.packages",
+  "retrywise.packages.diagnosis",
+  "retrywise.packages.domain",
+  "retrywise.packages.razorpay",
+  "retrywise.packages.simulator",
+  "retrywise.services",
+  "retrywise.services.control_plane",
+]
+package-dir = { retrywise = "." }
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["apps/console"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+files = ["packages", "services"]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[tool.coverage.run]
+branch = true
+source = ["retrywise"]
+omit = [
+  "*/tests/*",
+  "*/packages/simulator/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 85
