@@ -78,6 +78,11 @@ The generated environment starts with `RETRYWISE_EFFECTS_MODE=disabled` and `RET
 
 Enrollment proves credential usability, but Razorpay does not return the `acc_` owner in the Payment Link list response. The `acc_` association therefore remains operator-attested metadata, protected by a key-ID digest and monotonic credential generation.
 
+Render's native runtime mounts dashboard secret files as root-owned `0640`.
+RetryWise accepts that managed boundary only when the running service belongs to
+the file's group, group access is read-only, and no access is granted to other
+users. Local and self-managed deployments continue to require owner-only `0600`.
+
 On Windows, POSIX mode bits do not represent NTFS access control. Before a
 local Windows worker reads the enrolled files, remove inherited access and grant
 full control only to the current operator on the private root (run from the same
