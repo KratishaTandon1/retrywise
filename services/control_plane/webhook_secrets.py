@@ -7,7 +7,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .private_files import is_private_regular_file
+from .private_files import open_private_regular_file
 
 
 class WebhookSecretFileError(RuntimeError):
@@ -42,16 +42,8 @@ def load_webhook_secret_file(path_value: str) -> WebhookSecretSnapshot:
         path = Path(path_value)
         if not path.is_absolute():
             raise ValueError
-        flags = os.O_RDONLY
-        if hasattr(os, "O_CLOEXEC"):
-            flags |= os.O_CLOEXEC
-        if hasattr(os, "O_NOFOLLOW"):
-            flags |= os.O_NOFOLLOW
-        descriptor = os.open(path, flags)
+        descriptor, metadata = open_private_regular_file(path)
         try:
-            metadata = os.fstat(descriptor)
-            if not is_private_regular_file(metadata):
-                raise ValueError
             if not 1 <= metadata.st_size <= 4096:
                 raise ValueError
             raw = os.read(descriptor, 4097)

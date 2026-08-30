@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 from typing import Final
 
-from .private_files import is_private_regular_file
+from .private_files import is_private_regular_file, open_private_regular_file
 from .razorpay_account_binding import (
     RazorpayCredentialMaterial,
     RazorpayCredentialResolutionError,
@@ -69,16 +69,8 @@ class FileRazorpayCredentialSecretResolver:
             if matched is None:
                 raise ValueError
             path = self._secret_root / matched.group(1)
-            flags = os.O_RDONLY
-            if hasattr(os, "O_CLOEXEC"):
-                flags |= os.O_CLOEXEC
-            if hasattr(os, "O_NOFOLLOW"):
-                flags |= os.O_NOFOLLOW
-            descriptor = os.open(path, flags)
+            descriptor, metadata = open_private_regular_file(path)
             try:
-                metadata = os.fstat(descriptor)
-                if not _private_file_metadata(metadata):
-                    raise ValueError
                 if not 1 <= metadata.st_size <= _MAX_SECRET_BYTES:
                     raise ValueError
                 raw = os.read(descriptor, _MAX_SECRET_BYTES + 1)

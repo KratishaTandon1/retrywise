@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 
-from .private_files import is_private_regular_file
+from .private_files import open_private_regular_file
 
 
 class GeminiSecretFileError(RuntimeError):
@@ -18,16 +18,8 @@ def load_gemini_api_key_file(path_value: str) -> str:
         path = Path(path_value)
         if not path.is_absolute():
             raise ValueError
-        flags = os.O_RDONLY
-        if hasattr(os, "O_CLOEXEC"):
-            flags |= os.O_CLOEXEC
-        if hasattr(os, "O_NOFOLLOW"):
-            flags |= os.O_NOFOLLOW
-        descriptor = os.open(path, flags)
+        descriptor, metadata = open_private_regular_file(path)
         try:
-            metadata = os.fstat(descriptor)
-            if not is_private_regular_file(metadata):
-                raise ValueError
             if not 1 <= metadata.st_size <= 2048:
                 raise ValueError
             raw = os.read(descriptor, 2049)

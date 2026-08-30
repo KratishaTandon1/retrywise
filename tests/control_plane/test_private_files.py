@@ -66,6 +66,33 @@ class PrivateFileMetadataTests(unittest.TestCase):
         )
         self.assertFalse(private_files.is_private_regular_file(metadata, platform_name="posix"))
 
+    def test_trusts_only_root_controlled_links_and_parent_directories(self) -> None:
+        def metadata(kind: int, mode: int, *, uid: int, gid: int = 2000) -> os.stat_result:
+            return cast(
+                os.stat_result,
+                SimpleNamespace(st_mode=kind | mode, st_uid=uid, st_gid=gid),
+            )
+
+        link = metadata(stat.S_IFLNK, 0o777, uid=0)
+        trusted_parent = metadata(stat.S_IFDIR, 0o755, uid=0)
+        self.assertTrue(
+            private_files._is_trusted_managed_symlink(
+                link, trusted_parent, platform_name="posix"
+            )
+        )
+        for unsafe_link, unsafe_parent in (
+            (metadata(stat.S_IFLNK, 0o777, uid=1000), trusted_parent),
+            (link, metadata(stat.S_IFDIR, 0o775, uid=0)),
+            (link, metadata(stat.S_IFDIR, 0o755, uid=1000)),
+            (metadata(stat.S_IFREG, 0o600, uid=0), trusted_parent),
+        ):
+            with self.subTest(link=unsafe_link, parent=unsafe_parent):
+                self.assertFalse(
+                    private_files._is_trusted_managed_symlink(
+                        unsafe_link, unsafe_parent, platform_name="posix"
+                    )
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
