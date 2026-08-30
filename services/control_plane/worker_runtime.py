@@ -115,7 +115,7 @@ def _gemini_client(mapping: Mapping[str, str]) -> GeminiDiagnosisClient | None:
         api_key = load_gemini_api_key_file(secret_file)
     except GeminiSecretFileError as exc:
         raise ConfigurationError("Gemini secret file is unavailable") from exc
-    raw_timeout = mapping.get("RETRYWISE_GEMINI_TIMEOUT_SECONDS", "2.5")
+    raw_timeout = mapping.get("RETRYWISE_GEMINI_TIMEOUT_SECONDS", "8")
     try:
         timeout = float(raw_timeout)
     except ValueError as exc:

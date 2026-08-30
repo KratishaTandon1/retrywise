@@ -99,6 +99,19 @@ class WorkerRuntimeCompositionTests(unittest.TestCase):
                 runtime_module._worker_id({"RETRYWISE_WORKER_ID": value})
         self.assertEqual(26, len(runtime_module._new_ulid()))
 
+    def test_gemini_client_uses_reliable_bounded_default(self) -> None:
+        with patch.object(
+            runtime_module,
+            "load_gemini_api_key_file",
+            return_value="test-key-1234567890",
+        ):
+            configured = runtime_module._gemini_client(
+                {"RETRYWISE_GEMINI_API_KEY_FILE": "/managed/gemini.json"}
+            )
+
+        self.assertIsNotNone(configured)
+        self.assertEqual(8.0, configured.timeout_seconds)  # type: ignore[union-attr]
+
     def test_composes_every_durable_handler_and_attests_credentials(self) -> None:
         replacements, outbox_worker_class = composition_replacements()
         startup_adapter = replacements.pop("_test_startup_adapter")

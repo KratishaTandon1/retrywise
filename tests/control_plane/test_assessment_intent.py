@@ -3,11 +3,14 @@ from __future__ import annotations
 import json
 import unittest
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 
 from retrywise.packages.diagnosis import (
     PINNED_BUNDLED_VERSION,
+    DiagnosisEngine,
+    DiagnosisMode,
+    DiagnosisProvenance,
     DiagnosisResult,
     DiagnosisRouter,
 )
@@ -546,6 +549,41 @@ class AssessmentContractTests(unittest.TestCase):
         assert isinstance(outcome, BlockedAssessmentPlan)
         self.assertIs(AssessmentDisposition.APPROVAL_REQUIRED, outcome.disposition)
         self.assertIn(GateReason.HIGH_VALUE_REQUIRES_APPROVAL.value, outcome.reason_codes)
+        self.assertIn(GateReason.APPROVAL_REQUIRED.value, outcome.reason_codes)
+
+    def test_hybrid_gemini_success_still_requires_operator_approval(self) -> None:
+        snapshot = assessment_module._snapshot_from_row(candidate_row(), command=command())
+        truth = provider_truth()
+        health = method_health()
+        local = DiagnosisRouter().infer(
+            merchant_id=MERCHANT_ID,
+            raw_features=assessment_module._diagnosis_features(snapshot, truth, health),
+        )
+        gemini_diagnosis = replace(
+            local,
+            provenance=DiagnosisProvenance(
+                requested_mode=DiagnosisMode.HYBRID_GEMINI,
+                executed_engine=DiagnosisEngine.GEMINI,
+                model_name="google_gemini",
+                latency_ms=420,
+            ),
+        )
+
+        outcome = planner().plan(
+            snapshot,
+            truth,
+            health,
+            diagnosis=gemini_diagnosis,
+        )
+
+        self.assertIsInstance(outcome, BlockedAssessmentPlan)
+        assert isinstance(outcome, BlockedAssessmentPlan)
+        self.assertIs(AssessmentDisposition.APPROVAL_REQUIRED, outcome.disposition)
+        self.assertTrue(outcome.proposal.requires_approval)  # type: ignore[union-attr]
+        self.assertIn(
+            GateReason.EXTERNAL_DIAGNOSIS_REQUIRES_APPROVAL.value,
+            outcome.reason_codes,
+        )
         self.assertIn(GateReason.APPROVAL_REQUIRED.value, outcome.reason_codes)
 
     def test_non_failed_or_misbound_fresh_truth_cannot_authorize(self) -> None:

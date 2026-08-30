@@ -78,6 +78,19 @@ The generated environment starts with `RETRYWISE_EFFECTS_MODE=disabled` and `RET
 
 Enrollment proves credential usability, but Razorpay does not return the `acc_` owner in the Payment Link list response. The `acc_` association therefore remains operator-attested metadata, protected by a key-ID digest and monotonic credential generation.
 
+On Windows, POSIX mode bits do not represent NTFS access control. Before a
+local Windows worker reads the enrolled files, remove inherited access and grant
+full control only to the current operator on the private root (run from the same
+account that starts the worker):
+
+```powershell
+$retrywiseAclPrincipal = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+icacls "$env:USERPROFILE\retrywise-private" /inheritance:r /grant:r "${retrywiseAclPrincipal}:(OI)(CI)F" /T /C
+```
+
+The resolver continues to reject Windows reparse points. Linux and container
+deployments still require exact owner-only POSIX file modes.
+
 ### Optional Gemini enrollment
 
 Local ML requires no external key and remains the default. To enable Hybrid or Shadow mode, provision one owner-only JSON secret file outside the repository:
@@ -86,9 +99,9 @@ Local ML requires no external key and remains the default. To enable Hybrid or S
 {"api_key":"<Gemini API key>"}
 ```
 
-Set file mode `0600`, then configure the same absolute mount path for API and worker as `RETRYWISE_GEMINI_API_KEY_FILE`. Optional non-secret controls are `RETRYWISE_GEMINI_MODEL` (default `gemini-2.5-flash`) and `RETRYWISE_GEMINI_TIMEOUT_SECONDS` (default `2.5`, maximum `10`). Never configure `GEMINI_API_KEY`; raw Gemini credentials in environment configuration are rejected.
+Set file mode `0600`, then configure the same absolute mount path for API and worker as `RETRYWISE_GEMINI_API_KEY_FILE`. Optional non-secret controls are `RETRYWISE_GEMINI_MODEL` (default `gemini-2.5-flash`) and `RETRYWISE_GEMINI_TIMEOUT_SECONDS` (default `8`, maximum `10`). Requests are stateless (`store=false`), use low thinking latency, and cap output. Never configure `GEMINI_API_KEY`; raw Gemini credentials in environment configuration are rejected.
 
-The API only reports whether a key file path is configured. Only the worker opens the file and calls Gemini. Use the authenticated Controls view or `POST /api/v1/controls/diagnosis-engine` to select `LOCAL_ML`, `HYBRID_GEMINI`, or `SHADOW`; changes affect future assessments and append immutable operator evidence. Keep `LOCAL_ML` selected until the worker starts successfully with the secret mount.
+The API only reports whether a key file path is configured. Only the worker component opens the file and calls Gemini, including when that worker is co-located with the free-tier API process. Use the authenticated Controls view or `POST /api/v1/controls/diagnosis-engine` to select `LOCAL_ML`, `HYBRID_GEMINI`, or `SHADOW`; changes affect future assessments and append immutable operator evidence. Select the intended mode once before the demonstration. In Hybrid mode, every recovery proposal waits for an explicit operator approval or rejection before any Razorpay effect is eligible.
 
 ## 5. Configure signed webhooks
 
@@ -143,6 +156,32 @@ docker compose --profile razorpay-test \
 The API readiness check now requires a fresh worker heartbeat with the exact code revision. Keep the merchant kill switch armed until the signed failed-payment case, enriched provider truth, observation deadline, and operator dossier are all correct.
 
 Disarm the merchant switch through the authenticated console or `POST /api/v1/controls/kill-switch` with a fresh `Idempotency-Key`, `enabled: false`, and reason `enable_test_mode_effects`. The immutable control event and current state must commit atomically.
+
+### Stable Render Free demonstration profile
+
+Render does not provide a Free instance type for a standalone background worker.
+For the no-cost demonstration only, run one API web-service instance with:
+
+```text
+RETRYWISE_EMBEDDED_WORKER=true
+RETRYWISE_DATA_SOURCE=RAZORPAY_TEST_MODE
+RETRYWISE_EFFECTS_MODE=razorpay_test
+RETRYWISE_GLOBAL_KILL_SWITCH=false
+```
+
+Mount the versioned Razorpay Test credential and optional Gemini key as Render
+secret files, and point `RETRYWISE_SECRET_ROOT` and
+`RETRYWISE_GEMINI_API_KEY_FILE` at those mounted locations. Do not configure raw
+key environment variables. Remove `RETRYWISE_CODE_REVISION` on Render: both roles
+automatically use Render's immutable `RENDER_GIT_COMMIT` value, eliminating
+manual revision edits on every deploy. Keep the Uvicorn instance count at one.
+
+This configuration is stable across the demo. Normal payment operation does not
+change environment variables. The authenticated merchant kill switch is the
+runtime emergency control; changing it writes an audited database event and does
+not redeploy the service. A production environment must move the worker to
+continuously available managed compute and must not rely on a Free service's idle
+sleep/wake behavior.
 
 ## 8. End-to-end validation
 

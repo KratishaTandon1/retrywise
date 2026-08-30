@@ -81,6 +81,7 @@ class ControlPlaneSettings:
     webhook_max_body_bytes: int
     code_revision: str
     database_require_tls: bool
+    embedded_worker_enabled: bool
 
     def __post_init__(self) -> None:
         if not isinstance(self.environment, DeploymentProfile):
@@ -93,6 +94,8 @@ class ControlPlaneSettings:
             raise ConfigurationError("global_kill_switch must be boolean")
         if not isinstance(self.database_require_tls, bool):
             raise ConfigurationError("database_require_tls must be boolean")
+        if not isinstance(self.embedded_worker_enabled, bool):
+            raise ConfigurationError("embedded_worker_enabled must be boolean")
         object.__setattr__(
             self,
             "public_base_url",
@@ -159,6 +162,9 @@ class ControlPlaneSettings:
             raise ConfigurationError(
                 "raw Gemini credentials are not accepted; configure RETRYWISE_GEMINI_API_KEY_FILE"
             )
+        code_revision = mapping.get("RENDER_GIT_COMMIT") or mapping.get(
+            "RETRYWISE_CODE_REVISION", "local-development"
+        )
         return cls(
             environment=environment,
             data_source=data_source,
@@ -176,10 +182,15 @@ class ControlPlaneSettings:
                 minimum=1_024,
                 maximum=1_048_576,
             ),
-            code_revision=mapping.get("RETRYWISE_CODE_REVISION", "local-development"),
+            code_revision=code_revision,
             database_require_tls=_parse_bool(
                 mapping,
                 "DATABASE_REQUIRE_TLS",
+                default=False,
+            ),
+            embedded_worker_enabled=_parse_bool(
+                mapping,
+                "RETRYWISE_EMBEDDED_WORKER",
                 default=False,
             ),
         )
@@ -195,5 +206,6 @@ class ControlPlaneSettings:
             "webhook_max_body_bytes": self.webhook_max_body_bytes,
             "code_revision": self.code_revision,
             "database_tls_required": self.database_require_tls,
+            "embedded_worker_enabled": self.embedded_worker_enabled,
             "razorpay_effect_credential_source": "versioned_managed_secret_binding",
         }

@@ -120,7 +120,7 @@ The reproducible default is an interpretable categorical Naive Bayes classifier 
 - `merchant_integration`
 - `unknown`
 
-The router supports three merchant-scoped modes. `LOCAL_ML` uses only the pinned artifact. `HYBRID_GEMINI` requests strict JSON from Gemini over the redacted categorical vector; schema-valid output is also checked for an exact 10,000-basis-point sum, taxonomy membership, and winner/probability agreement. Timeout, rate limit, unavailability, malformed output, or an open circuit immediately selects Local ML and adds a fallback abstention, which forces human approval. `SHADOW` keeps Local ML authoritative and stores Gemini agreement for comparison.
+The router supports three merchant-scoped modes. `LOCAL_ML` uses only the pinned artifact. `HYBRID_GEMINI` makes a stateless, low-thinking request for strict JSON over the redacted categorical vector; schema-valid output is also checked for an exact 10,000-basis-point sum, taxonomy membership, and winner/probability agreement. Timeout, rate limit, unavailability, malformed output, or an open circuit immediately selects Local ML and records a fallback abstention. Every Hybrid recovery proposal—successful Gemini or fallback—must receive an explicit, version-bound operator approval or rejection. `SHADOW` keeps Local ML authoritative and stores Gemini agreement for comparison.
 
 Neither engine returns an executable instruction. Diagnosis returns probabilities, model/version provenance, safe categorical evidence, and OOD/low-confidence abstention. Gemini never receives identifiers, amount, customer/contact fields, free-form notes, credentials, or tools. The deterministic gate is the only planning authority, and the isolated effect worker repeats fresh-truth and version checks before it can call Razorpay.
 
@@ -298,6 +298,17 @@ Target deployment topology:
 - Database: managed PostgreSQL.
 - Secrets: deployment secret manager, never frontend variables.
 - Provider ingress: one stable HTTPS endpoint with a merchant-specific path token.
+
+The no-cost Render demonstration profile intentionally co-locates the API and
+worker roles in one web service. FastAPI owns the process lifespan and starts one
+credential-attested worker thread; shutdown signals stop it gracefully. PostgreSQL
+remains the only bridge between the roles, so no correctness boundary depends on
+shared memory. A webhook or console request wakes the free web service, after
+which the worker drains durable outbox work. `RENDER_GIT_COMMIT` is the automatic
+revision fence for both roles. This profile avoids a laptop worker but does not
+claim continuous production availability: Render Free web services can sleep on
+idle, and production should deploy the worker as a continuously available
+background service.
 
 Sandbox and production process profiles require a single-host TCP PostgreSQL URI
 and an executable TLS policy that forces libpq `sslmode=verify-full`. Certificate

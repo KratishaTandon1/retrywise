@@ -131,7 +131,13 @@ class GeminiDiagnosisRouterTests(unittest.TestCase):
         rendered = json.dumps(payload)
         self.assertNotIn("customer_id", rendered)
         self.assertNotIn("payment_id", rendered)
+        self.assertIs(payload["store"], False)
+        self.assertEqual(
+            {"thinking_level": "low", "max_output_tokens": 512},
+            payload["generation_config"],
+        )
         self.assertEqual("application/json", payload["response_format"]["mime_type"])
+        self.assertEqual(8.0, transport.calls[0]["timeout_seconds"])
 
     def test_invalid_external_semantics_fall_back_and_force_approval(self) -> None:
         response = model_response(predicted="provider_incident")

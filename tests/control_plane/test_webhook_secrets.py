@@ -33,13 +33,18 @@ class WebhookSecretFileTests(unittest.TestCase):
             path = root / "webhook.json"
             path.write_text(json.dumps({"current": "x" * 32}), encoding="utf-8")
             path.chmod(0o644)
-            with self.assertRaises(WebhookSecretFileError):
-                load_webhook_secret_file(str(path))
+            if os.name != "nt":
+                with self.assertRaises(WebhookSecretFileError):
+                    load_webhook_secret_file(str(path))
             path.chmod(0o600)
             link = root / "link.json"
-            os.symlink(path, link)
-            with self.assertRaises(WebhookSecretFileError):
-                load_webhook_secret_file(str(link))
+            try:
+                os.symlink(path, link)
+            except OSError:
+                pass
+            else:
+                with self.assertRaises(WebhookSecretFileError):
+                    load_webhook_secret_file(str(link))
             path.write_text(json.dumps({"current": "x" * 32, "extra": True}), encoding="utf-8")
             with self.assertRaises(WebhookSecretFileError):
                 load_webhook_secret_file(str(path))

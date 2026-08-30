@@ -53,7 +53,7 @@ Operator console -> authenticated API -> persisted cases, approvals,
                                         controls, incidents, audit proof
 ```
 
-This is a modular monolith with separate API and worker processes and one PostgreSQL authority. It avoids decorative microservices while keeping explicit provider, domain, persistence, and effect boundaries.
+This is a modular monolith with separate API and worker roles and one PostgreSQL authority. Production can deploy the roles as separate processes. The free Render demonstration profile co-locates both roles in one web-service process, while preserving the same transactional outbox, leased worker, credential, and effect boundaries.
 
 ## How recovery is triggered
 
@@ -71,10 +71,10 @@ The console exposes this same sequence as an operating pipeline and keeps Test M
 The Controls view persists one diagnosis mode per merchant:
 
 - `LOCAL_ML`: pinned, offline, deterministic inference.
-- `HYBRID_GEMINI`: Gemini structured output with a 2.5-second bound, semantic validation, circuit breaker, and Local ML fallback. A fallback forces human approval.
+- `HYBRID_GEMINI`: stateless Gemini structured output with an eight-second bound, low thinking latency, semantic validation, a circuit breaker, and Local ML fallback. Every Hybrid recovery proposal requires an explicit operator approval or rejection, whether Gemini answers or the fallback takes over.
 - `SHADOW`: Local ML remains authoritative while Gemini agreement is recorded for evaluation.
 
-Gemini receives only payment method, normalized error source/step/reason, incident state, attempt bucket, and failure-age bucket. It receives no provider IDs, amount, customer identity, phone, email, UPI address, card data, or notes, and it has no credentials or execution tools. Every decision records requested mode, executed engine, latency, fallback reason, and shadow result.
+Gemini receives only payment method, normalized error source/step/reason, incident state, attempt bucket, and failure-age bucket. It receives no provider IDs, amount, customer identity, phone, email, UPI address, card data, or notes, and it has no credentials or execution tools. Requests set `store=false`. Every decision records requested mode, executed engine, latency, fallback reason, and shadow result.
 
 ## Local verification
 
@@ -110,16 +110,16 @@ The frozen primary run contains 2,000 paired synthetic journeys with 400 merchan
 
 The ten-seed stress run covers 20,000 synthetic journeys. All ten point estimates are positive, nine per-seed intervals support improvement, aggregate simulated lift over the strongest safe rules baseline is INR 39.82L, and hard safety violations remain zero. These numbers are engineering evidence, not observed merchant revenue.
 
-## Current release boundary
+## Deployment evidence and release boundary
 
 The implementation is a production-grade **pre-production Test Mode candidate**, not a claim of completed production deployment. Before a production release, the following external checks remain mandatory:
 
-- Generate and commit the console dependency lockfile, then install with the frozen lock and pass the Next.js production build.
-- Push the source from the deployment PC, expose the API at a public HTTPS URL, and register the endpoint in the Razorpay Test dashboard.
-- Repeat the failed-payment → recovery-link → paid flow through Razorpay-delivered webhooks, then run the late-original-success cancellation path.
-- Preserve release evidence only after the runtime audit API, Razorpay dashboard, and console agree.
+- Move the worker role to continuously available managed compute and the database to a backed-up, non-expiring production plan.
+- Repeat the late-original-success cancellation path and retain its provider reconciliation evidence.
+- Add sustained load, restore, credential-rotation, and alert-delivery certification for the target production environment.
+- Keep live-money credentials and live effects unsupported until a separately reviewed release introduces them deliberately.
 
-Repository validation includes enrolled Razorpay Test credentials, migrated PostgreSQL state, real Payment and Order reads, a real Standard Payment Link create, a captured Test recovery payment, deduplicated signed ingress, and a verified five-entry audit chain. Public-ingress certification remains separate and must be completed with Razorpay-delivered webhooks after deployment.
+Deployment validation includes public signed Razorpay Test webhooks, enrolled Test credentials, migrated PostgreSQL state, real Payment and Order reads, a real Standard Payment Link create, a captured Test recovery payment, deduplicated ingress, a terminal `RECOVERED` case, provider payment reconciliation, and a valid five-entry audit chain. These are Test Mode engineering facts, not live-money or production-reliability claims.
 
 ## Documentation
 

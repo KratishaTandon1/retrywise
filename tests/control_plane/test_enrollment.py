@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import stat
 import tempfile
 import unittest
@@ -166,9 +167,13 @@ class EnrollmentTests(unittest.TestCase):
                 secret_root / "razorpay",
                 secret_root / "webhook",
             ):
-                self.assertEqual(0o700, stat.S_IMODE(path.stat().st_mode))
+                self.assertTrue(path.is_dir())
+                if os.name != "nt":
+                    self.assertEqual(0o700, stat.S_IMODE(path.stat().st_mode))
             for path in (result.credential_path, result.webhook_path, result.runtime_env_path):
-                self.assertEqual(0o600, stat.S_IMODE(path.stat().st_mode))
+                self.assertTrue(path.is_file())
+                if os.name != "nt":
+                    self.assertEqual(0o600, stat.S_IMODE(path.stat().st_mode))
 
             credential = json.loads(result.credential_path.read_text(encoding="utf-8"))
             self.assertEqual(KEY_SECRET, credential["key_secret"])

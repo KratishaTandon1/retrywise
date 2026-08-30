@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import time
+from contextlib import asynccontextmanager
 from typing import Annotated, Any
 
 from ...packages.diagnosis import DiagnosisMode
@@ -16,6 +17,7 @@ from ...packages.razorpay import (
 )
 from .approval_request import ApprovalRequestConflict, ApprovalRequestNotFound
 from .diagnosis_controls import DiagnosisControlConflict, DiagnosisControlNotFound
+from .embedded_worker import EmbeddedWorkerLifecycle
 from .merchant_controls import (
     MerchantControlConflict,
     MerchantControlNotFound,
@@ -40,6 +42,7 @@ from .webhook_ingress import (
     PayloadTooLarge,
     UnsupportedMediaType,
 )
+from .worker_runtime import WorkerRuntime
 
 
 async def _read_bounded_body(request: Any, *, max_body_bytes: int) -> bytes:
@@ -86,10 +89,25 @@ def create_app(
 
     active_runtime = runtime or ControlPlaneRuntime.from_mapping(os.environ)
     active_observability = observability or Observability()
+    embedded_worker = None
+    if runtime is None and active_runtime.settings.embedded_worker_enabled:
+        embedded_worker = EmbeddedWorkerLifecycle(runtime=WorkerRuntime(mapping=os.environ))
+
+    @asynccontextmanager
+    async def lifespan(_app: Any) -> Any:
+        if embedded_worker is not None:
+            embedded_worker.start()
+        try:
+            yield
+        finally:
+            if embedded_worker is not None:
+                embedded_worker.stop()
+
     disable_unstructured_server_access_log()
     app = FastAPI(
         title="RetryWise Control Plane",
         version="0.1.0",
+        lifespan=lifespan,
         docs_url=(
             None if active_runtime.settings.environment is DeploymentProfile.PRODUCTION else "/docs"
         ),

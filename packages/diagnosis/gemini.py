@@ -214,7 +214,7 @@ def _diagnosis(
 class GeminiDiagnosisClient:
     api_key: str
     model: str = "gemini-2.5-flash"
-    timeout_seconds: float = 2.5
+    timeout_seconds: float = 8.0
     transport: GeminiTransport = field(default_factory=UrlLibGeminiTransport)
 
     def __post_init__(self) -> None:
@@ -236,6 +236,11 @@ class GeminiDiagnosisClient:
         payload = {
             "model": self.model,
             "input": _prompt(vector),
+            "store": False,
+            "generation_config": {
+                "thinking_level": "low",
+                "max_output_tokens": 512,
+            },
             "response_format": {
                 "type": "text",
                 "mime_type": "application/json",

@@ -72,8 +72,8 @@ Every failed predicate emits a stable machine-readable reason code.
 | Database interception or endpoint spoofing | Tenant/payment evidence disclosure or mutation | Deployed profiles force PostgreSQL `verify-full` over an unambiguous TCP host with trusted CA and hostname validation |
 | Prompt injection in notes/error text | Model-directed effect | Closed structured features, no tools/secrets, strict schema |
 | Gemini returns schema-valid but inconsistent probabilities | Misclassification presented as evidence | Exact taxonomy, integer basis-point sum, first-winner consistency, confidence and OOD validation before acceptance |
-| Gemini timeout, rate limit, or vendor outage | Assessment backlog or silent unsafe degradation | 2.5-second bound, three-failure circuit breaker, immediate Local ML fallback, fallback abstention and approval in Hybrid mode |
-| Gemini key disclosure | Unauthorized vendor usage | Owner-only server file, fixed-origin header authentication, redacted representations, no browser/API response exposure |
+| Gemini timeout, rate limit, or vendor outage | Assessment backlog or silent unsafe degradation | Eight-second bound, low thinking level, three-failure circuit breaker, immediate Local ML fallback, and mandatory operator approval or rejection in Hybrid mode |
+| Gemini key disclosure or unintended prompt retention | Unauthorized vendor usage or unnecessary data retention | Owner-only server file, fixed-origin header authentication, `store=false`, redacted representations, no browser/API response exposure |
 | External diagnosis cost exhaustion | Availability/cost incident | One call per eligible assessment, no model retry loop, circuit breaker, Local ML and deployment egress controls |
 | Hallucinated cause | Harmful intervention | Calibration, abstention, deterministic gate, approval |
 | Permanent-looking diagnosis hides late capture | Duplicate collection | Immutable 120-second floor from trusted receive/database time, enforced by aggregate, both gate stages, and PostgreSQL |

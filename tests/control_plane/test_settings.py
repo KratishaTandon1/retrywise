@@ -20,6 +20,22 @@ class ControlPlaneSettingsTests(unittest.TestCase):
         self.assertIs(settings.effects_mode, EffectsMode.DISABLED)
         self.assertTrue(settings.global_kill_switch)
         self.assertFalse(settings.database_require_tls)
+        self.assertFalse(settings.embedded_worker_enabled)
+
+    def test_render_revision_is_automatic_and_overrides_manual_revision(self) -> None:
+        settings = ControlPlaneSettings.from_mapping(
+            {
+                "RENDER_GIT_COMMIT": "render-sha-current",
+                "RETRYWISE_CODE_REVISION": "stale-manual-sha",
+            }
+        )
+        self.assertEqual("render-sha-current", settings.code_revision)
+
+    def test_embedded_worker_flag_is_strict(self) -> None:
+        settings = ControlPlaneSettings.from_mapping({"RETRYWISE_EMBEDDED_WORKER": "true"})
+        self.assertTrue(settings.embedded_worker_enabled)
+        with self.assertRaises(ConfigurationError):
+            ControlPlaneSettings.from_mapping({"RETRYWISE_EMBEDDED_WORKER": "True"})
 
     def test_effects_cannot_be_enabled_in_replay(self) -> None:
         with self.assertRaises(ConfigurationError):
@@ -124,6 +140,7 @@ class ControlPlaneSettingsTests(unittest.TestCase):
             "effects_mode": "disabled",
             "global_kill_switch": 1,
             "database_require_tls": 1,
+            "embedded_worker_enabled": 1,
         }
         for field, value in invalid_values.items():
             with self.subTest(field=field), self.assertRaises(ConfigurationError):

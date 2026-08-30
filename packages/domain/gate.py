@@ -67,6 +67,7 @@ class GateReason(StrEnum):
     CONFIDENCE_UNAVAILABLE = "CONFIDENCE_UNAVAILABLE"
     CONFIDENCE_BELOW_THRESHOLD = "CONFIDENCE_BELOW_THRESHOLD"
     ABSTENTION_REQUIRES_APPROVAL = "ABSTENTION_REQUIRES_APPROVAL"
+    EXTERNAL_DIAGNOSIS_REQUIRES_APPROVAL = "EXTERNAL_DIAGNOSIS_REQUIRES_APPROVAL"
     HIGH_VALUE_REQUIRES_APPROVAL = "HIGH_VALUE_REQUIRES_APPROVAL"
     APPROVAL_REQUIRED = "APPROVAL_REQUIRED"
     APPROVAL_REJECTED = "APPROVAL_REJECTED"
@@ -83,6 +84,7 @@ APPROVAL_BLOCKING_REASONS = frozenset(
         GateReason.CONFIDENCE_UNAVAILABLE,
         GateReason.CONFIDENCE_BELOW_THRESHOLD,
         GateReason.ABSTENTION_REQUIRES_APPROVAL,
+        GateReason.EXTERNAL_DIAGNOSIS_REQUIRES_APPROVAL,
         GateReason.HIGH_VALUE_REQUIRES_APPROVAL,
         GateReason.APPROVAL_REQUIRED,
         GateReason.APPROVAL_REJECTED,
@@ -185,6 +187,7 @@ class GateContext:
     quiet_hours_active: bool = False
     attempts_used: int = 0
     abstention_required: bool = False
+    external_diagnosis_review_required: bool = False
     approval: Approval | None = None
     durable_intent_recorded: bool = False
 
@@ -216,6 +219,7 @@ class GateContext:
             "opted_out",
             "quiet_hours_active",
             "abstention_required",
+            "external_diagnosis_review_required",
             "durable_intent_recorded",
         ):
             if not isinstance(getattr(self, name), bool):
@@ -470,6 +474,8 @@ class DeterministicGate:
                 approval_causes.append(GateReason.CONFIDENCE_BELOW_THRESHOLD)
             if context.abstention_required:
                 approval_causes.append(GateReason.ABSTENTION_REQUIRES_APPROVAL)
+            if context.external_diagnosis_review_required:
+                approval_causes.append(GateReason.EXTERNAL_DIAGNOSIS_REQUIRES_APPROVAL)
             approval_needed = proposal.requires_approval or bool(approval_causes)
             if approval_needed:
                 approval_reason = self._approval_failure(proposal, context)

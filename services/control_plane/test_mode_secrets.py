@@ -12,10 +12,10 @@ from __future__ import annotations
 import json
 import os
 import re
-import stat
 from pathlib import Path
 from typing import Final
 
+from .private_files import is_private_regular_file
 from .razorpay_account_binding import (
     RazorpayCredentialMaterial,
     RazorpayCredentialResolutionError,
@@ -35,6 +35,10 @@ _FIELDS: Final = frozenset(
         "key_secret",
     }
 )
+
+
+def _private_file_metadata(metadata: os.stat_result, *, platform_name: str = os.name) -> bool:
+    return is_private_regular_file(metadata, platform_name=platform_name)
 
 
 class FileRazorpayCredentialSecretResolver:
@@ -73,17 +77,7 @@ class FileRazorpayCredentialSecretResolver:
             descriptor = os.open(path, flags)
             try:
                 metadata = os.fstat(descriptor)
-                if not stat.S_ISREG(metadata.st_mode):
-                    raise ValueError
-                if os.name == "nt":
-                    # NTFS permissions live in the ACL; reject reparse-point indirection.
-                    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
-                    if getattr(metadata, "st_file_attributes", 0) & reparse_flag:
-                        raise ValueError
-                elif (
-                    metadata.st_uid not in {0, os.getuid()}
-                    or stat.S_IMODE(metadata.st_mode) & 0o077
-                ):
+                if not _private_file_metadata(metadata):
                     raise ValueError
                 if not 1 <= metadata.st_size <= _MAX_SECRET_BYTES:
                     raise ValueError

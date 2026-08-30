@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from retrywise.services.control_plane.razorpay_account_binding import (
     RazorpayCredentialResolutionError,
 )
 from retrywise.services.control_plane.test_mode_secrets import (
     FileRazorpayCredentialSecretResolver,
+    _private_file_metadata,
 )
 
 MERCHANT_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV"
@@ -33,6 +36,15 @@ def _payload(**updates: object) -> dict[str, object]:
 
 
 class FileRazorpayCredentialSecretResolverTests(unittest.TestCase):
+    def test_windows_metadata_uses_acl_boundary_and_rejects_reparse_points(self) -> None:
+        regular = stat.S_IFREG | 0o666
+        safe = SimpleNamespace(st_mode=regular, st_file_attributes=0)
+        reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+        unsafe = SimpleNamespace(st_mode=regular, st_file_attributes=reparse_flag)
+
+        self.assertTrue(_private_file_metadata(safe, platform_name="nt"))
+        self.assertFalse(_private_file_metadata(unsafe, platform_name="nt"))
+
     def test_resolves_exact_owner_only_test_material_without_repr_leak(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "account.json"
@@ -70,8 +82,9 @@ class FileRazorpayCredentialSecretResolverTests(unittest.TestCase):
             path.write_text(json.dumps(_payload()), encoding="utf-8")
             path.chmod(0o640)
             resolver = FileRazorpayCredentialSecretResolver(secret_root=directory)
-            with self.assertRaises(RazorpayCredentialResolutionError):
-                resolver.resolve(credential_secret_ref="file:account.json")
+            if os.name != "nt":
+                with self.assertRaises(RazorpayCredentialResolutionError):
+                    resolver.resolve(credential_secret_ref="file:account.json")
 
     def test_rejects_traversal_symlinks_nonexistent_and_oversized_material(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -90,9 +103,13 @@ class FileRazorpayCredentialSecretResolverTests(unittest.TestCase):
             target.write_text(json.dumps(_payload()), encoding="utf-8")
             target.chmod(0o600)
             link = Path(directory) / "link.json"
-            os.symlink(target, link)
-            with self.assertRaises(RazorpayCredentialResolutionError):
-                resolver.resolve(credential_secret_ref="file:link.json")
+            try:
+                os.symlink(target, link)
+            except OSError:
+                pass
+            else:
+                with self.assertRaises(RazorpayCredentialResolutionError):
+                    resolver.resolve(credential_secret_ref="file:link.json")
 
             oversized = Path(directory) / "oversized.json"
             oversized.write_bytes(b"{" + b" " * (8 * 1024) + b"}")

@@ -36,7 +36,8 @@ class ConsoleExperienceContractTests(unittest.TestCase):
         self.assertIn("caseDetail", self.component)
         self.assertIn("provider_payment_link_id", self.component)
         self.assertIn("provider_payment_id", self.component)
-        self.assertIn("Gemini + fallback", self.component)
+        self.assertIn("Gemini + ML fallback", self.component)
+        self.assertIn("operator must approve or reject each Hybrid proposal", self.component)
         self.assertIn("Shadow comparison", self.component)
         self.assertIn("Local ML fallback", self.component)
 

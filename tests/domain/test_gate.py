@@ -238,6 +238,40 @@ class DeterministicGateTests(unittest.TestCase):
         )
         self.assertIn(GateReason.APPROVAL_BINDING_MISMATCH, denied.reasons)
 
+    def test_external_diagnosis_requires_a_bound_operator_decision(self) -> None:
+        candidate = replace(proposal(), requires_approval=True)
+        missing = gate().evaluate_policy(
+            candidate,
+            context(external_diagnosis_review_required=True),
+        )
+        self.assertEqual(
+            missing.reasons,
+            (
+                GateReason.EXTERNAL_DIAGNOSIS_REQUIRES_APPROVAL,
+                GateReason.APPROVAL_REQUIRED,
+            ),
+        )
+
+        approval = Approval(
+            approval_id="approval_external_1",
+            merchant_id=candidate.merchant_id,
+            case_id=candidate.case_id,
+            action_key=candidate.action_key,
+            proposal_digest=candidate.proposal_digest,
+            decision_version=candidate.decision_version,
+            approved_by="operator_1",
+            approved_at=NOW - timedelta(minutes=1),
+            expires_at=NOW + timedelta(minutes=10),
+        )
+        allowed = gate().evaluate_policy(
+            candidate,
+            context(
+                external_diagnosis_review_required=True,
+                approval=approval,
+            ),
+        )
+        self.assertTrue(allowed.allowed)
+
     def test_contact_specific_stopping_rules_do_not_block_link_creation(self) -> None:
         link_creation = gate().evaluate_policy(
             proposal(),

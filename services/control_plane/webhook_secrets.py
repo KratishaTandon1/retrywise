@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import os
-import stat
 from dataclasses import dataclass
 from pathlib import Path
+
+from .private_files import is_private_regular_file
 
 
 class WebhookSecretFileError(RuntimeError):
@@ -49,9 +50,7 @@ def load_webhook_secret_file(path_value: str) -> WebhookSecretSnapshot:
         descriptor = os.open(path, flags)
         try:
             metadata = os.fstat(descriptor)
-            if not stat.S_ISREG(metadata.st_mode):
-                raise ValueError
-            if metadata.st_uid not in {0, os.getuid()} or stat.S_IMODE(metadata.st_mode) & 0o077:
+            if not is_private_regular_file(metadata):
                 raise ValueError
             if not 1 <= metadata.st_size <= 4096:
                 raise ValueError

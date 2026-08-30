@@ -28,6 +28,7 @@ from enum import StrEnum
 from typing import Protocol, cast
 
 from ...packages.diagnosis import (
+    DiagnosisMode,
     DiagnosisResult,
     DiagnosisRouter,
     FailureClass,
@@ -1110,6 +1111,9 @@ class StandardPaymentLinkAssessmentPlanner:
         case = snapshot.recovery_case
         decision_version = case.version + 1
         evaluated_at = snapshot.database_now
+        external_diagnosis_review_required = (
+            diagnosis.provenance.requested_mode is DiagnosisMode.HYBRID_GEMINI
+        )
         proposal = ActionProposal(
             proposal_id=f"proposal:{case.recovery_case_id}:{decision_version}",
             merchant_id=case.merchant_id,
@@ -1122,7 +1126,7 @@ class StandardPaymentLinkAssessmentPlanner:
             amount=Money(case.amount_due_minor, case.currency),
             payment_method=truth.payment_method,
             model_confidence=diagnosis.confidence,
-            requires_approval=diagnosis.abstained,
+            requires_approval=(diagnosis.abstained or external_diagnosis_review_required),
         )
         gate_snapshot = ProviderSnapshot(
             payment_state=truth.canonical_payment_state,
@@ -1152,6 +1156,7 @@ class StandardPaymentLinkAssessmentPlanner:
             contacts_in_window=case.contact_count,
             attempts_used=case.attempt_count,
             abstention_required=diagnosis.abstained,
+            external_diagnosis_review_required=external_diagnosis_review_required,
         )
         decision = self.gate.evaluate_policy(proposal, context)
         if not decision.allowed:

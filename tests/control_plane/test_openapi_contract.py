@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from unittest import TestCase
+from unittest.mock import patch
 
 try:
     import yaml
@@ -18,7 +19,8 @@ class OpenApiContractTests(TestCase):
             if os.environ.get("RETRYWISE_REQUIRE_API_TESTS") == "1":
                 self.fail("PyYAML is required for the API contract suite")
             self.skipTest("PyYAML is not installed")
-        app = create_app()
+        with patch.dict(os.environ, {}, clear=True):
+            app = create_app()
         runtime_operations = {
             (route.path, method.lower())
             for route in app.routes

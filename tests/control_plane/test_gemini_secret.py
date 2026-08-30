@@ -38,10 +38,18 @@ class GeminiSecretFileTests(unittest.TestCase):
                 encoding="utf-8",
             )
             extra.chmod(0o600)
+            rejected_paths = ["relative.json", str(extra)]
+            if os.name != "nt":
+                rejected_paths.append(str(loose))
             link = root / "link.json"
-            os.symlink(valid, link)
+            try:
+                os.symlink(valid, link)
+            except OSError:
+                pass
+            else:
+                rejected_paths.append(str(link))
 
-            for path in ("relative.json", str(loose), str(extra), str(link)):
+            for path in rejected_paths:
                 with self.subTest(path=Path(path).name), self.assertRaises(GeminiSecretFileError):
                     load_gemini_api_key_file(path)
 
