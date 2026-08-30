@@ -27,7 +27,14 @@ def load_gemini_api_key_file(path_value: str) -> str:
             metadata = os.fstat(descriptor)
             if not stat.S_ISREG(metadata.st_mode):
                 raise ValueError
-            if metadata.st_uid not in {0, os.getuid()} or stat.S_IMODE(metadata.st_mode) & 0o077:
+            if os.name == "nt":
+                reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+                if getattr(metadata, "st_file_attributes", 0) & reparse_flag:
+                    raise ValueError
+            elif (
+                metadata.st_uid not in {0, os.getuid()}
+                or stat.S_IMODE(metadata.st_mode) & 0o077
+            ):
                 raise ValueError
             if not 1 <= metadata.st_size <= 2048:
                 raise ValueError
