@@ -189,6 +189,27 @@ class ContextReader:
         )
 
 
+class DelayedContextReader(ContextReader):
+    """Return evidence observed after the executor's initial lease check."""
+
+    def load_fresh_gate_context(
+        self, *, proposal, provider_account_id: str, evaluated_at: datetime
+    ) -> GateContext:
+        self.calls += 1
+        observed_at = evaluated_at + timedelta(seconds=9)
+        return GateContext(
+            merchant_id=proposal.merchant_id,
+            case_id=proposal.case_id,
+            evaluated_at=evaluated_at,
+            aggregate_version=4,
+            expected_aggregate_version=4,
+            recovery_state=RecoveryState.ACTION_QUEUED,
+            snapshot=snapshot(observed_at=observed_at),
+            environment_effects_enabled=True,
+            observation_deadline=evaluated_at - timedelta(seconds=1),
+        )
+
+
 class Provider:
     def __init__(
         self,
@@ -268,6 +289,30 @@ def executor(
 
 
 class CreatePaymentLinkExecutorTests(unittest.TestCase):
+    def test_effect_timestamp_is_recaptured_after_slow_fresh_reads(self) -> None:
+        gate, effect_command = command()
+        provider = Provider()
+        contexts = DelayedContextReader()
+        times = iter((NOW, NOW + timedelta(seconds=10)))
+        intent = DurableActionIntent.record(effect_command, recorded_at=NOW)
+        service = CreatePaymentLinkExecutor(
+            gate=gate,
+            intents=IntentReader(intent),
+            contexts=contexts,
+            provider=provider,
+            clock=lambda: next(times),
+        )
+
+        result = service.execute(
+            job=leased_job(effect_command),
+            command=effect_command,
+            worker_id=WORKER,
+        )
+
+        self.assertEqual(ExecutionDisposition.CREATED, result.disposition)
+        self.assertEqual(1, contexts.calls)
+        self.assertEqual(1, len(provider.create_calls))
+
     def test_effect_authorization_is_committed_before_the_provider_create(self) -> None:
         gate, effect_command = command()
         provider = Provider()

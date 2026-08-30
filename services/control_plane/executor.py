@@ -354,6 +354,10 @@ class CreatePaymentLinkExecutor:
         )
         if not isinstance(fresh_context, GateContext):
             raise TypeError("fresh context port must return GateContext")
+        # Provider truth and method-health reads can take longer than the policy's
+        # allowed clock skew. Authorize against time captured after those reads.
+        now = _require_utc(self._clock(), field="clock result")
+        job.assert_active_lease(worker_id=worker_id, lease_token=lease_token, now=now)
         effect_context = replace(
             fresh_context,
             evaluated_at=now,
