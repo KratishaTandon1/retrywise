@@ -57,11 +57,12 @@ def _is_trusted_managed_symlink(
     if platform_name == "nt" or not stat.S_ISLNK(link_metadata.st_mode):
         return False
     parent_mode = stat.S_IMODE(parent_metadata.st_mode)
+    non_owner_writable = bool(parent_mode & (stat.S_IWGRP | stat.S_IWOTH))
     return (
         link_metadata.st_uid == 0
         and stat.S_ISDIR(parent_metadata.st_mode)
         and parent_metadata.st_uid == 0
-        and not bool(parent_mode & (stat.S_IWGRP | stat.S_IWOTH))
+        and (not non_owner_writable or bool(parent_mode & stat.S_ISVTX))
     )
 
 

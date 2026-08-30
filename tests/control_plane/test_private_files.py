@@ -80,9 +80,17 @@ class PrivateFileMetadataTests(unittest.TestCase):
                 link, trusted_parent, platform_name="posix"
             )
         )
+        self.assertTrue(
+            private_files._is_trusted_managed_symlink(
+                link,
+                metadata(stat.S_IFDIR, 0o3777, uid=0),
+                platform_name="posix",
+            )
+        )
         for unsafe_link, unsafe_parent in (
             (metadata(stat.S_IFLNK, 0o777, uid=1000), trusted_parent),
             (link, metadata(stat.S_IFDIR, 0o775, uid=0)),
+            (link, metadata(stat.S_IFDIR, 0o777, uid=0)),
             (link, metadata(stat.S_IFDIR, 0o755, uid=1000)),
             (metadata(stat.S_IFREG, 0o600, uid=0), trusted_parent),
         ):

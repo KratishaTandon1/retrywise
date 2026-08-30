@@ -80,10 +80,11 @@ Enrollment proves credential usability, but Razorpay does not return the `acc_` 
 
 Render's native runtime exposes dashboard secret files as root-controlled links
 to root-owned `0640` targets. RetryWise accepts that managed boundary only when
-the link and its non-writable parent are root-controlled, the running service
-belongs to the target's group, group access is read-only, and no access is
-granted to other users. Local and self-managed deployments continue to require
-owner-only `0600`; ordinary links remain rejected.
+the link and parent are root-controlled; a non-owner-writable parent must use
+the Unix sticky bit so the service identity cannot replace the root-owned link.
+The running service must belong to the target's read-only group, and no target
+access is granted to other users. Local and self-managed deployments continue
+to require owner-only `0600`; ordinary links remain rejected.
 
 On Windows, POSIX mode bits do not represent NTFS access control. Before a
 local Windows worker reads the enrolled files, remove inherited access and grant

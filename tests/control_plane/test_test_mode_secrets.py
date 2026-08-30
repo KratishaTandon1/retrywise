@@ -7,7 +7,9 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
+from retrywise.services.control_plane import private_files
 from retrywise.services.control_plane.razorpay_account_binding import (
     RazorpayCredentialResolutionError,
 )
@@ -59,6 +61,47 @@ class FileRazorpayCredentialSecretResolverTests(unittest.TestCase):
             self.assertEqual("rzp_test_examplekey", material.key_id)
             self.assertNotIn("example-secret-not-real", repr(material))
             self.assertNotIn(directory, repr(resolver))
+
+    @unittest.skipIf(os.name == "nt", "Render managed links use POSIX metadata")
+    def test_resolves_exact_render_sticky_directory_secret_link(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "managed-account-target"
+            encoded = json.dumps(_payload()).encode("utf-8")
+            target.write_bytes(encoded)
+            target.chmod(0o600)
+            link = root / "account.json"
+            link.symlink_to(target)
+            resolver = FileRazorpayCredentialSecretResolver(secret_root=root)
+
+            link_metadata = SimpleNamespace(
+                st_mode=stat.S_IFLNK | 0o777,
+                st_uid=0,
+                st_gid=1000,
+            )
+            parent_metadata = SimpleNamespace(
+                st_mode=stat.S_IFDIR | 0o3777,
+                st_uid=0,
+                st_gid=1000,
+            )
+            target_metadata = SimpleNamespace(
+                st_mode=stat.S_IFREG | 0o640,
+                st_uid=0,
+                st_gid=1000,
+                st_size=len(encoded),
+            )
+            with (
+                patch.object(private_files.os, "lstat", return_value=link_metadata),
+                patch.object(private_files.os, "stat", return_value=parent_metadata),
+                patch.object(private_files.os, "fstat", return_value=target_metadata),
+                patch.object(private_files.os, "getuid", return_value=1000),
+                patch.object(private_files.os, "getgid", return_value=1000),
+                patch.object(private_files.os, "getgroups", return_value=[1000]),
+            ):
+                material = resolver.resolve(credential_secret_ref="file:account.json")
+
+            self.assertEqual(MERCHANT_ID, material.merchant_id)
+            self.assertEqual(PROVIDER_ACCOUNT_ID, material.provider_account_id)
 
     def test_rejects_live_keys_unknown_fields_and_permissive_files(self) -> None:
         variants = (
